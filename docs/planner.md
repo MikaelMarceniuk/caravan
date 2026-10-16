@@ -1,14 +1,15 @@
 # Planejador de Viagem Colaborativo — Plano do Projeto
 
-> Nome provisório: **[a definir]**
+> Nome: **Caravan**
 > Objetivo: projeto de portfólio para freelas e vagas remotas no exterior (pagamento em euro/dólar).
-> Plataformas: **Web (Next.js)** + **Android (React Native / Expo)**, com o mesmo backend e o mesmo motor de sincronização.
+> Plataformas: **Web (Next.js)** no MVP. **Android (Expo)** na v2, reaproveitando o mesmo backend e o mesmo motor de sincronização.
+> Arquitetura detalhada: [`architecture.md`](./architecture.md).
 
 ---
 
 ## 1. Pitch
 
-Um grupo monta o roteiro de uma viagem junto, em tempo real. Cada **dia** é uma coluna e cada **atividade** é um card. Todos veem quem está online, quem está editando o quê e as mudanças dos outros na hora, sem flicker. O app funciona offline (aeroporto, estrada, roaming) e sincroniza sozinho quando a conexão volta. Nenhum dado se perde, mesmo se o servidor cair.
+Um grupo monta o roteiro de uma viagem junto, em tempo real. A viagem é dividida em **stops** (cidades, numa timeline), cada stop tem seus **dias** (colunas) e cada **atividade** é um card. Todos veem quem está online, quem está editando o quê e as mudanças dos outros na hora, sem flicker. O app funciona offline (aeroporto, estrada, roaming) e sincroniza sozinho quando a conexão volta. Nenhum dado se perde, mesmo se o servidor cair.
 
 O produto é simples de propósito. A complexidade está no que ele demonstra tecnicamente.
 
@@ -24,239 +25,126 @@ O produto é simples de propósito. A complexidade está no que ele demonstra te
 | Escala horizontal | 2+ instâncias da API com Redis pub/sub |
 | Redis | Presença efêmera (TTL) + pub/sub |
 | Mensageria | Pub/sub entre instâncias (opcional: fila para jobs como snapshots) |
-| Integração externa | Busca de lugares (Nominatim/OSM, Mapbox ou Google Places) |
-| Testes | Unitários (sync engine) + integração (múltiplos clientes WS concorrentes) + chaos test |
+| Integração externa | Busca de lugares (Photon/OSM) |
+| Testes | Unitários + property-based (convergência) + integração (múltiplos clientes WS) + chaos test |
 | Performance | Load test com k6 (conexões simultâneas, latência p95 do broadcast) |
-| Fullstack + mobile | Next.js, Expo/React Native, código de sync compartilhado |
-| DevOps | Docker Compose, nginx, CI, deploy, publicação na Play Store |
+| Fullstack | Next.js + núcleo de sync agnóstico de plataforma (pronto para o Android na v2) |
+| DevOps | Docker Compose, Caddy, Cloudflare, CI/CD com deploy sem downtime, IaC (OpenTofu) |
 
 ---
 
 ## 3. Escopo do MVP
 
 ### Dentro
-- Auth (e-mail/senha ou magic link; OAuth Google opcional)
-- Criar viagem (nome, datas → gera as colunas/dias)
-- Convite por link (papéis: owner, editor)
-- Board do roteiro:
-  - Criar, editar e excluir cards (título, horário, local, notas)
-  - Mover cards entre dias e reordenar dentro do dia
-  - Criar, renomear e reordenar dias
-- Presença:
-  - Avatares de quem está online no board
-  - Indicador "fulano está editando este card"
-  - **Web:** cursores ao vivo
-  - **Android:** só avatares e indicador de edição
-- Offline: editar sem conexão; operações ficam na fila e sincronizam na reconexão
-- Busca de lugares para preencher o local do card
+- Auth: e-mail/senha, Google, magic link, esqueci a senha (Better Auth)
+- Lista de viagens (próximas/passadas, quem está online, convites pendentes)
+- Criar viagem (nome, datas → gera os dias; primeiro stop e convites opcionais)
+- Convites: link (papel, expira em 7 dias, reset) e por e-mail (reenviar, aceitar/recusar); papéis owner e editor
+- **Overview:** timeline de stops por mês, adicionar/editar/remover stop (cidade, datas, transporte, cor), aviso de gaps
+- **Board** por stop: dias como colunas (título editável), cards ordenados por horário
+  - Criar, editar e excluir cards (título, horário, local, notas) no CardSheet
+  - Mover cards entre dias (drag & drop)
+- **Agenda:** linha do tempo do dia, "agora" e "up next"
+- Presença: avatares, "fulano está editando" (card e campo), cursores ao vivo, drag ao vivo
+- Offline: o plano fica sempre disponível; as edições vão para a fila e sincronizam na volta; status Synced/Syncing/Offline
+- Conflitos: painel "What changed" (Use mine / Keep theirs / Restore), card excluído visível, feed de atividade
+- Busca ⌘K na viagem (offline) + busca de lugares (online)
+- **Web responsiva completa** (celular e desktop), com drag por toque
+- Sem demo interativa: a vitrine é o GIF/vídeo
 
 ### Fora (v2+)
+- **Documentos/anexos** e offline de arquivos
+- **Android** (Expo)
 - Chat do grupo
 - Votação em atividades
 - Divisão de gastos
 - Mapa com rota do dia
-- Anexos e fotos
 - iOS
 
 ---
 
-## 4. Arquitetura
+## 4–7. Arquitetura, consistência, persistência e stack
 
-```
-                ┌─────────────┐      ┌──────────────┐
-                │  Next.js    │      │ Expo (RN)    │
-                │  apps/web   │      │ apps/mobile  │
-                └──────┬──────┘      └──────┬───────┘
-                       │ packages/sync (compartilhado)
-                       │   REST + WebSocket │
-                       ▼                    ▼
-                   ┌────────────────────────────┐
-                   │        nginx (LB)          │
-                   └──────┬──────────────┬──────┘
-                          ▼              ▼
-                   ┌────────────┐  ┌────────────┐
-                   │ api #1     │  │ api #2     │   Elysia/Bun
-                   └─────┬──────┘  └─────┬──────┘
-                         │   pub/sub     │
-                         ├──────►Redis◄──┤   presença (TTL) + broadcast entre instâncias
-                         ▼               ▼
-                   ┌────────────────────────────┐
-                   │ PostgreSQL                 │   fonte da verdade
-                   │ (ops log + snapshots)      │
-                   └────────────────────────────┘
-```
+Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade técnica. Resumo:
 
-### Monorepo (Bun workspaces ou Turborepo)
-
-```
-apps/
-  api/        Elysia + Bun — REST (auth, viagens, convites) + WebSocket (ops, presença)
-  web/        Next.js
-  mobile/     Expo (React Native)
-packages/
-  sync/       motor de sync: fila de ops, aplicação otimista, rebase, reconexão
-  shared/     tipos e schemas (Zod/TypeBox) das operações e entidades
-  ui-tokens/  (opcional) cores e espaçamentos compartilhados
-infra/
-  docker-compose.yml, nginx.conf, k6/
-```
-
-**Peça central: `packages/sync`.** Ele é agnóstico de plataforma (sem DOM, sem React Native). Web e mobile são "só UI" em cima dele. É o código para mostrar em entrevista e o mais testado do projeto.
+- **Monorepo** (Bun + Turborepo): `apps/api` (Elysia), `apps/web` (Next.js), `packages/core` (domínio + `decide()` compartilhado entre cliente e servidor), `packages/sync` (motor de sync do cliente), `packages/tokens`.
+- **Consistência:** servidor autoritativo, ops versionadas por viagem, lock `FOR UPDATE` na linha da viagem, LWW por campo. **Quem perde um conflito não perde o dado**: o valor fica guardado em `conflicts` até a pessoa decidir.
+- **Tempo real:** WebSocket + Redis pub/sub entre 2 instâncias atrás do Caddy. O cliente detecta buracos de versão e pede `resync`.
+- **Presença:** só Redis (hash com TTL por campo + pub/sub para cursor e drag).
+- **Persistência:** Postgres (projeção + `ops_log` + snapshots); no cliente, IndexedDB + Service Worker (Serwist).
+- **Stack:** Bun, Elysia, Drizzle, Zod, Better Auth, Resend, Next.js, dnd-kit, TanStack Query, Photon (lugares), fast-check, Playwright, k6, toxiproxy, Docker Compose, GitHub Actions, Caddy, Cloudflare, VPS ARM da Hetzner para tudo ([`deploy.md`](./deploy.md)).
 
 ---
 
-## 5. Modelo de consistência
-
-**Escolha: servidor autoritativo com operações versionadas.**
-(Alternativa considerada: CRDT com Yjs/Automerge. Resolveria merge automaticamente, mas deixaria o backend como relay e esconderia o problema que o projeto quer demonstrar. Isso deve ficar documentado no README como trade-off.)
-
-### Fluxo de uma operação
-1. O cliente gera a op com `opId` (UUID, idempotência) e `baseVersion` (última versão conhecida do board).
-2. O cliente **aplica otimisticamente** no estado local, sem flicker, e põe a op na fila de pendentes.
-3. O servidor recebe, valida (permissão, schema, existência da entidade) e resolve conflitos.
-4. O servidor grava no log com `version = última + 1` (transação, lock por board).
-5. O servidor responde `ack { opId, version }` ao autor e faz broadcast `op { ..., version }` para os outros (via Redis pub/sub para as demais instâncias).
-6. Se rejeitar, manda `reject { opId, reason }`. O cliente desfaz a op e reaplica as pendentes sobre o estado confirmado (rebase).
-
-### Regras de conflito (simples e explícitas)
-- **Mover card:** last-writer-wins pela ordem de chegada no servidor.
-- **Editar campo:** LWW por campo (editar título não sobrescreve notas).
-- **Editar card excluído:** rejeitado.
-- **Ordenação:** *fractional indexing* (posição string, ex.: `"a0"`, `"a0V"`, `"a1"`). Mover um card altera só a posição dele. Se dois clientes gerarem a mesma posição, o desempate é por `cardId`.
-
-### Tipos de operação (v1)
-```ts
-type Op =
-  | { type: "day.create";   dayId; title; position }
-  | { type: "day.update";   dayId; fields: Partial<{ title; position }> }
-  | { type: "day.delete";   dayId }
-  | { type: "card.create";  cardId; dayId; position; title }
-  | { type: "card.update";  cardId; fields: Partial<{ title; time; place; notes }> }
-  | { type: "card.move";    cardId; toDayId; position }
-  | { type: "card.delete";  cardId };
-
-type Envelope = { opId: string; boardId: string; baseVersion: number; op: Op; clientTs: number };
-```
-
-### Mensagens WebSocket
-| Direção | Mensagem | Conteúdo |
-|---|---|---|
-| C→S | `hello` | `boardId`, `lastVersion`, token |
-| S→C | `sync` | ops desde `lastVersion` **ou** snapshot + ops seguintes |
-| C→S | `op` | Envelope |
-| S→C | `ack` / `reject` | `opId`, `version` / `reason` |
-| S→C | `op` | op confirmada de outro cliente |
-| C→S | `presence` | cursor `{x,y}` (throttle ~30–50ms), `editingCardId` |
-| S→C | `presence` | estado de presença dos outros |
-| ↔ | `ping`/`pong` | heartbeat |
-
----
-
-## 6. Persistência e recuperação
-
-### Tabelas principais (PostgreSQL)
-```
-users        (id, name, email, avatar_url, created_at)
-trips        (id, name, start_date, end_date, owner_id, current_version, created_at)
-trip_members (trip_id, user_id, role)            -- owner | editor
-invites      (token, trip_id, role, expires_at)
-days         (id, trip_id, title, position, deleted_at)
-cards        (id, trip_id, day_id, title, time, place_json, notes, position, deleted_at, updated_version)
-ops_log      (trip_id, version, op_id UNIQUE, user_id, op_json, created_at)   PK (trip_id, version)
-snapshots    (trip_id, version, state_json, created_at)
-```
-- `days` e `cards` são a projeção materializada, para leitura rápida. `ops_log` é o histórico e a base para a reconexão.
-- `op_id UNIQUE` garante idempotência no reenvio após a reconexão.
-- Snapshot a cada N ops (ex.: 200) ou por job periódico.
-
-### Reconexão
-- O cliente guarda `lastVersion` (IndexedDB na web, SQLite/MMKV no mobile).
-- No `hello`, se `current - lastVersion` for menor que o limite, o servidor envia as ops faltantes. Senão, envia o snapshot mais recente e as ops seguintes.
-- A fila de pendentes é reenviada na ordem. Duplicatas são ignoradas pelo `op_id`.
-- Backoff exponencial com jitter.
-
-### Presença (Redis, nunca no Postgres)
-- `presence:{tripId}` → hash `userId → {name, color, cursor, editingCardId, instance}` com TTL renovado por heartbeat.
-- Canal `trip:{tripId}` para broadcast de ops e presença entre instâncias.
-
----
-
-## 7. Stack
-
-| Camada | Tecnologia |
-|---|---|
-| API | Bun + Elysia, WebSocket nativo, Drizzle ORM |
-| Banco | PostgreSQL |
-| Cache / pub/sub / presença | Redis |
-| Web | Next.js (App Router), Zustand ou store própria sobre o `sync`, dnd-kit |
-| Mobile | Expo (React Native), react-native-reanimated/gesture-handler para drag |
-| Validação | Zod ou TypeBox (em `packages/shared`) |
-| Lugares | Nominatim/OSM (grátis), com Mapbox ou Google Places como alternativa |
-| Testes | bun test (unit), testes de integração com múltiplos clientes WS, Playwright (e2e web) |
-| Carga | k6 (WebSocket) |
-| Infra | Docker Compose, nginx, GitHub Actions |
-| Deploy | VPS/Fly.io/Railway para a API, Vercel para a web, Play Store para o Android |
-
----
-
-## 8. Cronograma — 10 semanas (10–20h/semana)
+## 8. Cronograma — 11 semanas (10–20h/semana)
 
 ### Semanas 1–2 — Fundação
-- [ ] Monorepo, lint, formatação, CI básico
+- [ ] Monorepo (Bun + Turborepo), Biome, CI básico
+- [ ] Comprar o domínio (Cloudflare Registrar)
 - [ ] Docker Compose (Postgres, Redis)
-- [ ] Auth
-- [ ] Schema do banco + migrations
-- [ ] REST: viagens, membros, convites
-- [ ] `packages/shared`: tipos e schemas das ops
+- [ ] Auth com Better Auth (e-mail/senha, Google, magic link) + Resend
+- [ ] Schema do banco + migrations (Drizzle)
+- [ ] REST: viagens, membros, convites (link e e-mail)
+- [ ] `packages/core`: tipos e schemas das ops
+- [ ] **Spike de risco:** página Next.js abrindo offline com Serwist
+- [ ] **Decidir:** comportamento de stops em período ocupado (`architecture.md` §19)
+- [ ] **Design:** telas de celular (até o fim da semana 4)
 
-### Semanas 3–4 — Protocolo e motor de sync
-- [ ] Servidor WebSocket: `hello`, `sync`, `op`, `ack`, `reject`
-- [ ] Aplicação de ops no servidor (transação + versão por viagem)
-- [ ] Fractional indexing
-- [ ] `packages/sync`: estado confirmado + pendentes, aplicação otimista, rebase
-- [ ] **Testes unitários** do sync (ordem, conflito, rejeição, idempotência)
-- [ ] **Testes de integração**: N clientes concorrentes convergem para o mesmo estado
+### Semanas 3–4 — Core, protocolo e motor de sync
+- [ ] `core`: `decide()` + mutations para todas as ops, invariantes de stops, ordenação por horário
+- [ ] Servidor WebSocket: `hello`/`welcome`, `op`, `ack`, `reject`, `resync`, ticket de auth
+- [ ] Pipeline de ops (lock por viagem, idempotência, `ops_log`, `field_meta`)
+- [ ] `packages/sync`: confirmado + pendentes, rebase, buffer de ordem, portas Transport/Storage/Clock
+- [ ] **Testes unitários** + **property-based** (N clientes, entrega aleatória → convergem)
+- [ ] **Integração**: N clientes WS concorrentes contra a API real
 
-### Semanas 5–6 — Web + escala
-- [ ] Board no Next.js (dias, cards, drag & drop, edição)
-- [ ] Presença: avatares, "editando", cursores ao vivo
-- [ ] Redis pub/sub + 2 instâncias da API atrás do nginx
-- [ ] Teste: clientes em instâncias diferentes veem as mesmas mudanças
+### Semanas 5–7 — Web (mobile-first)
+- [ ] Lista de viagens, nova viagem, convite, join
+- [ ] Overview (timeline de stops, add stop, gaps) + busca de lugares (Photon)
+- [ ] Board por stop (dias, cards por horário, drag entre dias) + CardSheet
+- [ ] Agenda + busca ⌘K
+- [ ] Layouts de celular, drag por toque, sheets em tela cheia
+- [ ] Acessibilidade: drag por teclado, `aria-live`, contraste
 
-### Semana 7 — Resiliência
-- [ ] Reconexão com `lastVersion` + backoff
-- [ ] Fila offline persistida no cliente
+### Semana 8 — Presença + escala
+- [ ] Presença: avatares, "editando" (card e campo), cursores e drag ao vivo
+- [ ] Redis pub/sub + 2 instâncias da API atrás do Caddy
+- [ ] Teste: clientes em instâncias diferentes convergem
+
+### Semana 9 — Resiliência
+- [ ] Persistência local (IndexedDB) + Service Worker
+- [ ] Reconexão com `lastVersion`, backoff, status Synced/Syncing/Offline + banner
 - [ ] Snapshots
-- [ ] **Chaos test**: derrubar instância / Redis / rede no meio de edições → nada se perde
+- [ ] **Chaos test** (toxiproxy): derrubar instância, Redis e rede no meio de edições → nada se perde
 
-### Semanas 8–9 — Android + integração
-- [ ] App Expo reaproveitando `packages/sync`
-- [ ] Board mobile (drag, edição, presença sem cursores)
-- [ ] Persistência offline no mobile
-- [ ] Busca de lugares (card com local)
-- [ ] **Submeter à Play Store cedo** (teste interno/fechado; a revisão pode demorar)
+### Semana 10 — Conflitos
+- [ ] Detecção no servidor (`field_overwritten`, `edit_on_deleted`, `deleted_after_edit`) + tabela `conflicts`
+- [ ] Painel "What changed" (Needs you / All activity), conflito inline no CardSheet, card excluído + restore, toast "Your change was undone"
 
-### Semana 10 — Lançamento
-- [ ] Deploy de produção (API, web)
-- [ ] Load test com k6 → registrar números no README
+### Semana 11 — Lançamento
+- [ ] Deploy de produção na VPS (cloud-init/OpenTofu, pipeline rolling, backups no R2, Grafana Cloud)
+- [ ] Load test com k6 → registrar números no README e na landing
 - [ ] README: arquitetura, diagrama, decisões e trade-offs, como rodar local
-- [ ] GIF/vídeo: 3 clientes (2 web + 1 Android) editando juntos + chaos demo
+- [ ] GIF/vídeo: 3 navegadores editando juntos + chaos demo
 - [ ] Post no LinkedIn + projeto em destaque no perfil
 
 ---
 
 ## 9. Vitrine (o que mostrar)
 
-- **GIF principal:** navegadores lado a lado + celular, cursores e cards se movendo.
+- **GIF principal:** dois navegadores + um celular lado a lado, cursores e cards se movendo; um deles offline e voltando.
 - **Chaos demo:** matar uma instância da API ao vivo, sem perda de dados.
+- **Conflito demo:** dois editam o mesmo horário → "What changed" → "Use mine".
 - **Números:** "X conexões simultâneas, p95 de broadcast em Y ms" (k6).
 - **README com "Decisões de design":**
   - Servidor autoritativo vs CRDT
-  - Fractional indexing vs reindexação
+  - `core` compartilhado (functional core, imperative shell)
+  - Conflitos sem perda: LWW + versões guardadas para quem perdeu
+  - Ordem do broadcast entre instâncias e detecção de buracos
   - Presença em Redis vs banco
   - Log de operações + snapshots
 - **Post no LinkedIn:** o problema, a decisão principal, o demo e o link.
-- Links: repositório público, web ao vivo, Play Store.
+- Links: repositório público, web ao vivo.
 
 ---
 
@@ -264,18 +152,22 @@ snapshots    (trip_id, version, state_json, created_at)
 
 | Risco | Mitigação / corte |
 |---|---|
-| Sync engine demorar mais | É prioridade; se atrasar, cortar a busca de lugares ou os cursores no primeiro deploy |
-| Drag & drop no mobile trabalhoso | Aceitar "mover para dia X" via menu no Android na v1 |
-| Revisão da Play Store demorar | Submeter para teste fechado na semana 8 |
+| Sync engine demorar mais | É prioridade; se atrasar, cortar ⌘K, drag ao vivo e Google OAuth no primeiro deploy |
+| Next.js offline (Service Worker) | Spike na semana 2; plano B: rotas do app como SPA estática servida pelo SW |
+| Conflitos (semana 9) apertarem | Manter detecção e tabela; a UI mínima é só o toast + "Restore" |
+| Overview (timeline) trabalhosa | Primeiro uma lista simples de stops; a timeline por mês vem depois |
+| Responsivo completo atrasar | Drag por toque vira "mover para dia X" por menu no celular; o resto fica |
+| Faltar design de celular | Derivar dos componentes desktop; revisar depois |
 | Escopo crescer | Tudo fora da seção 3 vai para o backlog v2 |
 
 ---
 
 ## 11. Backlog v2
+- **Android (Expo)**: Agenda + Board + CardSheet sobre `packages/sync`; checklist em `architecture.md` §16
+- **Documentos/anexos** (R2/MinIO, presigned upload) + offline por arquivo/stop/viagem
+- Histórico / "desfazer" usando o ops log
 - Chat do grupo
 - Votação em atividades
 - Divisão de gastos multi-moeda
 - Mapa com rota do dia
-- Anexos (reservas, bilhetes)
-- Histórico / "desfazer" usando o ops log
 - iOS
