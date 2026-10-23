@@ -15,6 +15,7 @@
 | P4 | **Cloudflare** (DNS + proxy + Registrar) | DDoS, cache dos assets estáticos, certificado de origem grátis |
 | P5 | **ARM ponta a ponta** | Máquina de dev aarch64, runner ARM grátis no GitHub, Hetzner ARM mais barata; sem emulação |
 | P6 | **Sem staging** | O compose local é idêntico ao de produção; a CI roda a integração contra ele |
+| P7 | **Protocolo "leitor antes de escritor"** (expand/contract também para ops e efeitos) | Rolling com instâncias mistas e rollback automático sem divergência (seção 5) |
 
 **Alternativa considerada:** Oracle Cloud Always Free (A1: 2 OCPU / 12 GB, €0). Descartada pelos riscos de recolhimento de instância ociosa, falta de capacidade na região e encerramento de conta. A Hetzner custa ~€7/mês e é previsível. O provisionamento em código (seção 6) mantém a migração barata nos dois sentidos.
 
@@ -116,10 +117,14 @@ push na main
 
 **Cada deploy exercita a reconexão de verdade.** É um chaos test que roda sozinho.
 
-**Clientes antigos:** o Service Worker pode manter uma versão velha rodando por dias.
+**Compatibilidade de protocolo: leitor antes de escritor (P7).** O Service Worker pode manter uma versão velha rodando por dias, e durante o rolling (ou um rollback) há instâncias N e N+1 ao mesmo tempo.
+- **Tipo novo de op ou de efeito leva dois releases:** no N+1, API, web e `core` **entendem** o tipo novo, mas ninguém o emite; no N+2, ele começa a ser emitido. Assim, instâncias mistas e o rollback de 1 release são sempre seguros. Remover um tipo segue o caminho inverso (para de emitir, depois para de entender).
 - O `hello` leva `protocolVersion`, e o servidor aceita a atual e a anterior.
-- Cliente mais velho que isso recebe `upgrade_required`: o SW atualiza e a página recarrega. As pendentes estão no IndexedDB, então nada se perde.
-- O schema das ops só muda de forma aditiva.
+  - Cliente mais velho que isso → `upgrade_required`: o SW atualiza e a página recarrega. Sem fila offline, não há pendentes a preservar (as em voo são de milissegundos).
+  - Cliente **mais novo** que o servidor (rollback) → `server_behind`: o cliente fica em só leitura e tenta de novo com backoff.
+- **Efeitos codificados por conexão:** o gateway serializa os `effects` na versão de protocolo de cada conexão. Se um efeito não tiver representação na versão do cliente, aquela conexão recebe `upgrade_required`, porque ignorar o efeito causaria divergência.
+- **Pub/sub e `ops_log` versionados:** toda mensagem em `trip:{id}` e todo `effects_json` levam `v`. O `core` exporta *upcasters* de `Mutation` (do `ops_log`) de cada versão antiga para a atual. O cache de leitura no IndexedDB não precisa de upcaster: formato incompatível é descartado e baixado de novo.
+- **Teste de compat na CI:** fixtures de mensagens e `ops_log` da versão anterior; e um teste de integração com API N e N+1 lado a lado e clientes das duas versões.
 
 **Migrations em duas fases (expand/contract):** no release N, adiciona coluna nullable e o código escreve nos dois formatos; no release N+1, remove o formato antigo.
 
