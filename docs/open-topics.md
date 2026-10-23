@@ -12,7 +12,6 @@
 | # | Assunto | Bloqueia | Peso |
 |---|---|---|---|
 | **A. Antes do primeiro código** ||||
-| 1 | Roadmap de features (v1, v2, v3…) no lugar do cronograma | Tudo | 🔴 |
 | 2 | Datas da viagem × datas dos stops | Schema de `trips`, NewTrip | 🔴 |
 | 3 | Validação: Zod ou TypeBox (`t`) do Elysia | `packages/core` | 🔴 |
 | 4 | Driver do Postgres e pool de conexões | Setup do Drizzle | 🔴 |
@@ -20,8 +19,8 @@
 | 7 | Stack da web (UI, versões, testes) | `apps/web` | 🟠 |
 | 22 | Criptografia do Bun: escopo | Setup do auth e do WS | 🟡 |
 | **B. Modelo de domínio** ||||
-| 8 | Mapa: em que versão entra e como fazer a rota | Roadmap (item 1) | 🟢 |
-| 9 | Fuso horário do stop | Tabela `stops`, Agenda | 🟡 |
+| 8 | Mapa: como fazer a rota | Mapa (v2) | 🟢 |
+| 9 | Fuso horário do stop | Agenda (v1.x) | 🟢 |
 | 10 | Entidades do lock de edição e id do dia | Tabela `edit_locks`, protocolo | 🟡 |
 | 11 | Lista completa de `RejectReason` | `decide`, protocolo | 🟡 |
 | **C. Produto e UX** ||||
@@ -30,7 +29,7 @@
 | 14 | Telas que mudaram e telas de celular | UI | 🟠 |
 | 15 | Empurrar ou só preencher ao adicionar stop | UI da Overview | 🟡 |
 | 16 | Onde mora o feed "All activity" | UI do status | 🟡 |
-| 17 | Papel *viewer* (só leitura) | Nada (backlog) | 🟢 |
+| 17 | Papel *viewer* (só leitura) | Nada (v2) | 🟢 |
 | **D. Validação técnica** ||||
 | 18 | Spike do Service Worker: critério de sucesso | Offline só leitura | 🔴 |
 | 19 | Mensagens fora de ordem: tempos e plano de teste | `packages/sync` | 🟠 |
@@ -42,30 +41,6 @@
 ---
 
 ## A. Antes do primeiro código
-
-### 1. Roadmap de features 🔴
-
-**Por que importa:** o `planner.md` §8 tem um cronograma de 11 semanas. Como vamos codar juntos, prazo por semana não faz sentido; o que importa é a **ordem** e o que entra em cada versão. Isso também resolve a antiga pauta "o que cortar se apertar": em vez de cortar, a feature muda de versão.
-
-**O que decidir:**
-- O que é a v1 (o que precisa estar no ar para o projeto servir de vitrine).
-- A ordem dos marcos dentro da v1 (cada um entregando algo que roda).
-- O que vai para a v1.x, v2 e v3.
-
-**Proposta para começar:**
-
-- **v1 — vitrine.** Em marcos, nesta ordem:
-  1. *Fundação:* monorepo, CI, compose, auth (e-mail/senha + magic link), criar e listar viagens.
-  2. *Plano sincronizado:* `core` (`decide` + efeitos), pipeline de ops, WS, `packages/sync`; Overview (lista de stops) + Board + CardSheet funcionando em tempo real entre duas abas.
-  3. *Colaboração:* convites, membros (ops de sistema), presença (avatares e "editing"), lock de edição.
-  4. *Resiliência e escala:* 2 instâncias + Redis pub/sub, reconexão, offline só leitura, chaos test.
-  5. *Uso real:* Agenda, responsivo com drag por toque, acessibilidade, toasts de rejeição.
-  6. *Lançamento:* deploy na VPS, k6, README, vídeo.
-- **v1.x — o que pode sair da v1 sem prejudicar a vitrine:** Google OAuth, busca ⌘K, cursor e drag ao vivo, timeline por mês na Overview, feed "All activity".
-- **v2:** Android (Expo), mapa (item 8), documentos/anexos, histórico/desfazer, transporte como entidade, papel *viewer*.
-- **v3+:** chat, votação, divisão de gastos, iOS.
-
-Depois de fechado, o roadmap substitui o §8 do `planner.md`, e os prazos "semana X" dos docs viram marcos.
 
 ### 2. Datas da viagem × datas dos stops 🔴
 
@@ -134,18 +109,17 @@ Depois de fechado, o roadmap substitui o §8 do `planner.md`, e os prazos "seman
 
 ## B. Modelo de domínio
 
-### 8. Mapa: em que versão entra e como fazer a rota 🟢
+### 8. Mapa: como fazer a rota 🟢
 
-**Já decidido:** a forma do `Place` (D26) e a stack do mapa, MapLibre GL JS + OpenFreeMap (D27).
+**Já decidido:** a forma do `Place` (D26), a stack do mapa, MapLibre GL JS + OpenFreeMap (D27), e que ele entra na v2 (`planner.md` §8).
 
 **O que decidir:**
-- Em que versão o mapa entra (hoje está na v2, "Mapa com rota do dia"; depende do item 1).
-- A rota do dia: OSRM, Valhalla ou GraphHopper. Todos precisam ser self-hosted (os servidores públicos de demonstração não servem para produção) e são pesados para a VPS de 8 GB.
+- A rota do dia: OSRM, Valhalla ou GraphHopper. Todos precisam ser self-hosted (os servidores públicos de demonstração não servem para produção) e são pesados para a VPS (4 GB no começo, 8 GB depois do upgrade).
 - Atribuição do OpenStreetMap obrigatória na tela.
 
-### 9. Fuso horário do stop 🟡
+### 9. Fuso horário do stop 🟢
 
-**Por que importa:** o §18 diz que cada stop guarda `timezone` (IANA) calculado de `lat/lon`, mas o campo não está no modelo (§3) nem na tabela `stops` (§11). A Agenda ("agora", "in 12 min") depende dele.
+**Por que importa:** o §18 diz que cada stop guarda `timezone` (IANA) calculado de `lat/lon`, mas o campo não está no modelo (§3) nem na tabela `stops` (§11). A Agenda ("agora", "in 12 min") depende dele. Como a Agenda ficou na v1.x, decidimos quando ela chegar.
 
 **A conversar:** se o fuso é guardado ou derivado, onde é calculado e como a Agenda lida com voos entre fusos.
 
@@ -220,7 +194,7 @@ Escolhidos sem conversa (`architecture.md` §7). Confirmar ou trocar:
 
 ### 17. Papel *viewer* (só leitura) 🟢
 
-Não muda a arquitetura (o papel já é conferido na transação). É uma questão de produto: alguém da família só acompanha o roteiro? Fica no backlog até alguém pedir.
+Não muda a arquitetura (o papel já é conferido na transação). É uma questão de produto: alguém da família só acompanha o roteiro? Está na v2 do roadmap.
 
 ---
 
@@ -268,21 +242,18 @@ Faltam na tabela de limites (`architecture.md` §18):
 
 Mecânicas; dá para fazer num commit só.
 
-- [ ] `planner.md` §8 (pipeline de ops): remover `field_meta`, resto da D6, que foi substituída.
 - [ ] `planner.md` §4–7: `op_receipts` "retidos para sempre" contradiz a D19 (7 dias).
 - [ ] `planner.md` §8 e `architecture.md` §16: a porta se chama `Storage`; no §10 ela é `Cache`.
 - [ ] `planner.md` §3: "datas → gera os dias" contradiz a D12 (depende do item 2).
 - [ ] `architecture.md` §0: a D23 aparece depois da D25.
-- [ ] Trocar os prazos "semana X" (`planner.md` e `architecture.md` §19) pelos marcos do roadmap (depende do item 1).
 
 ---
 
 ## F. Preparação prática
 
-- [ ] Commitar as mudanças pendentes nos docs (`architecture.md`, `deploy.md`, `planner.md`, `CONTEXT.md`, esta lista, `mise.toml`).
 - [ ] Domínio: escolher o nome (hoje `caravan.x` é placeholder) e comprar no Cloudflare Registrar. Vem antes do Resend.
 - [ ] Resend: só envia para qualquer e-mail depois de verificar o domínio. No local, o mailpit cobre.
-- [ ] Cliente OAuth do Google (só se o Google OAuth ficar na v1; ver item 1).
+- [ ] Cliente OAuth do Google e Sign in with Apple (quando entrarem; a Apple exige a conta de desenvolvedor paga).
 - [ ] Repositório público ou privado: o `deploy.md` conta com o runner ARM e o Actions grátis de repo público.
 - [ ] `LICENSE`.
 - [ ] Convenções: formato de commit, estratégia de branch e template de PR (com o checklist do item 20), num `AGENTS.md`/`CLAUDE.md` curto.
