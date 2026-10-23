@@ -34,6 +34,9 @@
 | D24 | **Locks de edição no Postgres** (`edit_locks`), conferidos **dentro da transação** da op; Redis só para o efêmero | O que é promessa do produto fica no banco, o que é efêmero fica no Redis. Sem janela de corrida, e o lock continua valendo com o Redis fora do ar |
 | D25 | **Ajustes de desempenho do caminho quente**: lock conferido na mesma ida ao banco do prefetch; renovação de locks em lote por instância; `edit_locks` `UNLOGGED` sem índice em `expires_at`; entrega local pelo pub/sub nativo do Bun | O lock no Postgres custa ~0,1 ms numa edição de 50–200 ms; o gargalo real é o fan-out dos cursores, atacado com o pub/sub nativo |
 | D23 | **Offline só leitura**: o plano fica em cache (IndexedDB + Service Worker) para consulta; editar exige conexão | Mantém o valor no aeroporto/roaming sem fila offline, rebase de longa duração nem conflitos persistidos |
+| D26 | **`Place` = `{ name, lat, lon, countryCode, osmId }`**, guardado inteiro em `place_json` desde a v1 | `lat/lon` é o formato de qualquer mapa open source (MapLibre, Leaflet, OpenLayers) e de qualquer fonte de tiles OSM: o mapa pode ser trocado sem migração. O Photon já devolve tudo, então não custa nada guardar antes de o mapa existir |
+| D27 | **Mapa com MapLibre GL JS + tiles do OpenFreeMap**; sem Google Maps, sem fallback e sem servidor de tiles próprio | Tudo open source, grátis e sem chave; a biblioteca roda no navegador, então não há container. Trocar a fonte de tiles depois é mudar uma URL no estilo |
+| D28 | **IDs em UUIDv7, coluna `uuid`**: o que nasce no cliente (stops, atividades, `opId`) usa `newId()` do `core` (lib `uuid`, `v7()`); o que o servidor cria (usuários, viagens, convites por e-mail) usa `DEFAULT uuidv7()` do Postgres. O servidor valida todo ID vindo do cliente (seção 18) | O `opId` tem de nascer no cliente para o reenvio ser idempotente (D16), e o ID da entidade, para a UI otimista não precisar trocar IDs temporários. Uma função só no navegador, no Bun e no RN; o v7 é ordenado no tempo, então os INSERTs vão para o fim do índice |
 
 ---
 
@@ -96,6 +99,8 @@ Stop        id, name, place, countryCode, arriveDate, leaveDate, color, transpor
 Day         (stopId, dayIndex), title                   — existe implicitamente para cada dia do stop (0..noites-1)
 Activity    id, stopId, dayIndex, title, time {start, end?} | null, place | null, notes, position
             data derivada = stop.arriveDate + dayIndex (D12)
+Place       name, lat, lon, countryCode, osmId          — valor (não é entidade), vindo do Photon (D26)
+            osmId com o tipo na frente: "N123" (nó), "W123" (via), "R123" (relação); o número sozinho é ambíguo
 ```
 
 **Invariantes** (validadas em `core`):
@@ -138,7 +143,7 @@ type SystemOp =
   | { type: "trip.delete" };
 ```
 
-IDs gerados no cliente (UUIDv7), para a UI otimista referenciar a entidade antes do `ack`.
+IDs gerados no cliente com `newId()` do `core` (UUIDv7, D28), para a UI otimista referenciar a entidade antes do `ack`. O cliente só propõe o ID; as regras de validação estão na seção 18.
 
 ### Núcleo funcional: `decide` → `mutations`
 
@@ -194,7 +199,7 @@ recebe op
  ├─ rate limit, tamanho e schema (Zod)        → reject transitório, sem recibo (o cliente reenvia)
  ├─ BEGIN
  │   SELECT current_version FROM trips WHERE id = $1 FOR UPDATE      -- serializa por viagem, entre instâncias
- │   SELECT * FROM op_receipts WHERE op_id = $2  → se existe: repete a MESMA resposta (D16)
+ │   SELECT * FROM op_receipts WHERE op_id = $2  → se existe: repete a MESMA resposta (D16); se for de outro usuário, rejeita (D28)
  │       aceita: ack { version, effects do ops_log } · rejeitada: reject { reason }
  │   papel do membro (dentro da tx: enxerga remoção/troca de papel já comitada)
  │   prefetch(requirements(envelope)) → reader síncrono (1–2 queries; a mesma ida ao banco traz os locks das entidades lidas)
@@ -312,7 +317,8 @@ interface Clock     { now(); setTimeout(...) }          // fake nos testes
 ## 11. Persistência
 
 ```sql
--- Better Auth gerencia: user, session, account, verification
+-- Better Auth gerencia: user, session, account, verification (IDs pelo DEFAULT uuidv7() do banco; conferir a configuração no setup)
+-- Todo id é uuid (UUIDv7, D28): DEFAULT uuidv7() no que o servidor cria; o que vem do cliente chega preenchido
 trips          (id, name, start_date, end_date, owner_id, current_version, created_at, deleted_at)
 trip_members   (trip_id, user_id, role, color, joined_at, last_seen_at)              PK (trip_id, user_id)
 invite_links   (token PK, trip_id, role, created_by, expires_at, revoked_at)
@@ -446,6 +452,12 @@ Checklist para não fechar portas agora:
 
 **Segurança e privacidade**
 - Upgrade do WS valida o `Origin` (Cross-Site WebSocket Hijacking) além do ticket.
+- **IDs vindos do cliente (D28):** o cliente propõe, o servidor decide.
+  - Formato UUIDv7 validado pelo Zod.
+  - `*.create` com ID que já existe (em qualquer viagem) é rejeitado; a PK é única no banco inteiro.
+  - Toda leitura do servidor é filtrada pelo `trip_id` da op, além da checagem de membro: saber o ID de uma entidade de outra viagem não dá acesso a ela.
+  - O recibo é conferido por `op_id` **e** `user_id`: um `opId` de outro usuário é rejeitado.
+  - Nada deriva tempo ou ordem do horário embutido no ID; `created_at` e a ordem vêm do servidor.
 - Textos do usuário são renderizados sempre como texto puro; CSP restritiva no Next.
 - Cookies `HttpOnly; Secure; SameSite=Lax`; mesma origem, sem CORS.
 - Exclusão de conta: remove os dados pessoais e troca o `user_id` no `ops_log`/`op_receipts` por um usuário "Deleted user"; as viagens das quais ele é owner passam para o membro mais antigo ou são excluídas se ele estiver sozinho.
@@ -467,7 +479,7 @@ Checklist para não fechar portas agora:
 
 ## 19. Em aberto
 
-> A pauta completa do que falta conversar, com prazos e recomendações, está em [`open-topics.md`](./open-topics.md).
+> A lista completa do que falta decidir, com recomendações, está em [`open-topics.md`](./open-topics.md).
 
 | Questão | Prazo | Contexto |
 |---|---|---|
