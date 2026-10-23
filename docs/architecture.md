@@ -1,6 +1,6 @@
 # Caravan — Arquitetura
 
-> Documento técnico de referência. O produto, o escopo e o cronograma estão em [`planner.md`](./planner.md); as telas, em [`design/`](./design).
+> Documento técnico de referência. O produto, o escopo e o roadmap estão em [`planner.md`](./planner.md); as telas, em [`design/`](./design).
 > Última revisão: 2026-10-16. Vocabulário do domínio: [`CONTEXT.md`](../CONTEXT.md).
 
 ---
@@ -17,7 +17,7 @@
 | D6 | ~~Conflitos detectados no servidor e guardados por usuário~~ | **Substituída pela D22** (lock de edição): sem edição offline, não há conflito para guardar |
 | D7 | **Documentos/anexos ficam para a v2** | Corte de escopo; offline no MVP = ver o plano, não os arquivos |
 | D8 | **Android fica para depois**, mas tudo fora de `apps/web` é agnóstico de plataforma | O app mobile tem de ser "só UI" quando chegar |
-| D9 | Better Auth (e-mail+senha, Google, magic link) | Cobre todas as telas de auth; adapter Drizzle; plugin Expo para depois |
+| D9 | Better Auth: **e-mail+senha** na v1, mais uma sessão anônima para o "Try the demo"; Google e Apple depois; **sem magic link** | Adapter Drizzle; plugins `anonymous` e Expo. O magic link não mostra nada da arquitetura, e senha + convite já cobrem a entrada |
 | D10 | Lugares via **Photon** (OSM) com proxy na API | A política do Nominatim proíbe autocomplete |
 | D11 | **Tudo numa VPS ARM** (web + API + Postgres + Redis), mesma origem, Caddy + Cloudflare | Latência do lock, custo e um compose que reproduz a prod. Detalhes em [`deploy.md`](./deploy.md) |
 | D12 | **Atividade ancorada no stop** (`stopId + dayIndex`), não numa data absoluta | Mover, esticar ou empurrar um stop é 1 op e leva as atividades junto; a data é derivada (`stop.arriveDate + dayIndex`) |
@@ -342,7 +342,7 @@ op_receipts    (op_id PK, trip_id, user_id, outcome, version, reason, created_at
 ## 12. Web (Next.js)
 
 - **Rotas públicas** (landing, sign in/up, join) com SSR. **App** (`/trips`, `/t/:id/...`) como client components sobre o `sync`.
-- **Offline só leitura (D23):** Service Worker com **Serwist** (precache do shell + rotas do app) e o `confirmed` de cada viagem em cache no IndexedDB. Sem conexão, a UI abre o plano, a Agenda e a busca, mas desabilita a edição. Ainda é o maior risco técnico da web: validar cedo (semana 2) com uma página "hello offline".
+- **Offline só leitura (D23):** Service Worker com **Serwist** (precache do shell + rotas do app) e o `confirmed` de cada viagem em cache no IndexedDB. Sem conexão, a UI abre o plano e a busca, mas desabilita a edição. Ainda é o maior risco técnico da web: validar cedo (M1) com uma página "hello offline".
 - **Toda regra de negócio passa pela API.** Nada de Server Actions/route handlers com lógica de domínio, senão o mobile não reaproveita.
 - **REST** com cliente **Eden** (tipos inferidos do Elysia) + TanStack Query para lista de viagens, convites e membros.
 - Drag & drop: dnd-kit. Busca ⌘K: índice em memória sobre o estado local (funciona offline). "New places from the map need a connection."
@@ -364,7 +364,7 @@ apps/api/src/
 
 - **Papéis:** editor edita o plano e convida; só o owner muda papéis e exclui a viagem.
 - **Convites:** link com token curto (`eR7k-2Qx9`), papel e expiração de 7 dias; "Reset link" revoga e cria outro. Convite por e-mail aparece como banner Join/Decline em `/trips` quando o e-mail verificado do usuário bate.
-- E-mail transacional (magic link, convite, reset de senha): Resend.
+- E-mail transacional (convite, reset de senha): Resend.
 
 ---
 
@@ -404,7 +404,7 @@ Checklist para não fechar portas agora:
 
 - **Documentos/anexos** (CardSheet → Documents, "Today's documents", offline por stop/viagem, Wi-Fi only, "S3 presigned uploads"). Na v2: R2 (prod)/MinIO (local), presign → PUT → op `attachment.add`.
 - **Android** ("Get it on Android" na landing).
-- Telas a ajustar no MVP: remover a seção Documents do CardSheet; os botões "Save X offline", OfflineStop e TripOffline saem; o indicador de offline na lista de viagens sai (o plano é sempre consultável offline); as telas de conflito (ConflictChanges, ConflictDeleted, ConflictField) saem: viram o lock "Ana is editing" e toasts; a tela Offline vira o banner "viewing only"; a landing troca "Web + Android" e os chips "S3 presigned uploads" e "Docker · nginx" (agora Caddy); "2 API instances behind nginx" vira "behind Caddy".
+- Telas a ajustar no MVP: no SignIn/SignUp, remover o "Email me a sign-in link instead" e esconder o "Continue with Google" até o OAuth entrar; remover a seção Documents do CardSheet; os botões "Save X offline", OfflineStop e TripOffline saem; o indicador de offline na lista de viagens sai (o plano é sempre consultável offline); as telas de conflito (ConflictChanges, ConflictDeleted, ConflictField) saem: viram o lock "Ana is editing" e toasts; a tela Offline vira o banner "viewing only"; a landing troca "Web + Android" e os chips "S3 presigned uploads" e "Docker · nginx" (agora Caddy); "2 API instances behind nginx" vira "behind Caddy".
 
 ---
 
@@ -483,21 +483,21 @@ Checklist para não fechar portas agora:
 
 | Questão | Prazo | Contexto |
 |---|---|---|
-| Adicionar ou esticar um stop num período ocupado: empurra os seguintes, só preenche buracos ou pergunta? | **Antes da semana 5** (UI da Overview) | Só UX: a invariante já é rígida (D14). Empurrar seria uma op explícita (`stops.shift`), barata com a D12 |
-| Telas de celular no design | **Antes da semana 5** | O design atual é só desktop (1440 px) |
+| Adicionar ou esticar um stop num período ocupado: empurra os seguintes, só preenche buracos ou pergunta? | **Antes do M2** (UI da Overview) | Só UX: a invariante já é rígida (D14). Empurrar seria uma op explícita (`stops.shift`), barata com a D12 |
+| Telas de celular no design | **Antes do M2** | O design atual é só desktop (1440 px) |
 | Transporte como entidade (horário de partida e chegada, fuso de origem e destino) | v2 | Hoje é só o ícone em `stop.transportIn` |
-| Assimetria das datas da viagem: `trip.update` que deixa stops de fora é aceito (aviso), mas `stop.create` fora da viagem é rejeitado (D14). Derivar as datas da viagem dos stops? | Antes da semana 3 | Hoje é aceitável: cada op valida só o que ela muda |
-| Lock de edição: TTL de 15 s e inatividade de 2 min são padrões iniciais | Semana 8 | Ajustar com o uso real; ver seção 7 |
-| Papel **viewer** (só leitura) | Backlog | Não muda a arquitetura: `decide` já checa papel na transação (D18) |
+| Assimetria das datas da viagem: `trip.update` que deixa stops de fora é aceito (aviso), mas `stop.create` fora da viagem é rejeitado (D14). Derivar as datas da viagem dos stops? | Antes do M1 (schema de `trips`) | Hoje é aceitável: cada op valida só o que ela muda |
+| Lock de edição: TTL de 15 s e inatividade de 2 min são padrões iniciais | M4 | Ajustar com o uso real; ver seção 7 |
+| Papel **viewer** (só leitura) | v2 | Não muda a arquitetura: `decide` já checa papel na transação (D18) |
 
 **Dependem de protótipo ou teste (não dá para decidir no papel):**
 
 | Questão | Como validar | Quando |
 |---|---|---|
-| Next.js + Serwist abre o app offline (já previsto) | Spike "hello offline" | Semana 2 |
-| `requirements` (D17) cobre tudo que o `decide` lê | Reader de prefetch que lança erro + fast-check com todas as ops | Semana 3–4 |
-| Custo do lock por op com prefetch (alvo ≤ 2 ms p95 no mesmo host) | Microbenchmark do pipeline com 2.000 atividades | Semana 4 |
-| Tamanho dos `effects` de cascata cabe em 64 KB (`stop.delete` com 135 atividades) | Teste de integração com a viagem do design | Semana 4 |
-| Latência percebida do lock (`acquire` antes de editar) não atrapalha abrir o CardSheet e arrastar | Medir o round-trip do `lock.acquire` em 4G simulado; a UI abre otimista e só bloqueia se vier `denied` | Semana 8 |
-| `pagehide` dispara de forma confiável no Chrome Android ao matar a aba | Teste manual em aparelho real | Semana 9 |
-| Rolling e rollback com instâncias mistas (P7) | Integração com API N e N+1 lado a lado | Semana 11 (antes do 1º deploy com mudança de protocolo) |
+| Next.js + Serwist abre o app offline (já previsto) | Spike "hello offline" | M1 |
+| `requirements` (D17) cobre tudo que o `decide` lê | Reader de prefetch que lança erro + fast-check com todas as ops | M2 (e a cada op nova) |
+| Custo do lock por op com prefetch (alvo ≤ 2 ms p95 no mesmo host) | Microbenchmark do pipeline com 2.000 atividades | M3 |
+| Tamanho dos `effects` de cascata cabe em 64 KB (`stop.delete` com 135 atividades) | Teste de integração com a viagem do design | M3 |
+| Latência percebida do lock (`acquire` antes de editar) não atrapalha abrir o CardSheet e arrastar | Medir o round-trip do `lock.acquire` em 4G simulado; a UI abre otimista e só bloqueia se vier `denied` | M4 |
+| `pagehide` dispara de forma confiável no Chrome Android ao matar a aba | Teste manual em aparelho real | M5 |
+| Rolling e rollback com instâncias mistas (P7) | Integração com API N e N+1 lado a lado | Na homologação, antes do 1º deploy com mudança de protocolo |

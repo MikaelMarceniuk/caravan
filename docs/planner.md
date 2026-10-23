@@ -33,26 +33,26 @@ O produto é simples de propósito. A complexidade está no que ele demonstra te
 
 ---
 
-## 3. Escopo do MVP
+## 3. Escopo da v1
 
 ### Dentro
-- Auth: e-mail/senha, Google, magic link, esqueci a senha (Better Auth)
+- Auth: e-mail/senha, esqueci a senha e "Try the demo" (sessão anônima) com Better Auth. Google e Apple ficam para depois
 - Lista de viagens (próximas/passadas, quem está online, convites pendentes)
 - Criar viagem (nome, datas → gera os dias; primeiro stop e convites opcionais)
 - Convites: link (papel, expira em 7 dias, reset) e por e-mail (reenviar, aceitar/recusar); papéis owner e editor
-- **Overview:** timeline de stops por mês, adicionar/editar/remover stop (cidade, datas, transporte, cor), aviso de gaps
+- **Overview:** lista de stops, adicionar/editar/remover stop (cidade, datas, transporte, cor), aviso de gaps
 - **Board** por stop: dias como colunas (título editável), cards ordenados por horário
   - Criar, editar e excluir cards (título, horário, local, notas) no CardSheet
   - Mover cards entre dias (drag & drop)
-- **Agenda:** linha do tempo do dia, "agora" e "up next"
-- Presença: avatares, "fulano está editando" (card e campo), cursores ao vivo, drag ao vivo
-- Offline **só leitura**: o plano fica sempre consultável (plano, Agenda, ⌘K); editar exige conexão; status Synced/Syncing/Offline + banner "viewing only"
-- Edição exclusiva: lock por entidade ("Ana is editing"), toasts com *Restore* quando uma edição é rejeitada, feed de atividade
-- Busca ⌘K na viagem (offline) + busca de lugares (online)
+- Presença: avatares, "fulano está editando" (card e campo)
+- Offline **só leitura**: o plano fica sempre consultável (Overview, Board e CardSheet); editar exige conexão; status Synced/Syncing/Offline + banner "viewing only"
+- Edição exclusiva: lock por entidade ("Ana is editing"), toasts com *Restore* quando uma edição é rejeitada
+- Busca de lugares (online)
 - **Web responsiva completa** (celular e desktop), com drag por toque
-- Sem demo interativa: a vitrine é o GIF/vídeo
+- "Try the demo": sessão anônima com uma viagem pronta, além do GIF/vídeo
 
-### Fora (v2+)
+### Fora
+- **v1.x:** Agenda, login com Google e Apple, busca ⌘K, cursores e drag ao vivo, timeline por mês na Overview, feed "All activity"
 - **Documentos/anexos** e offline de arquivos
 - **Android** (Expo)
 - Chat do grupo
@@ -60,6 +60,8 @@ O produto é simples de propósito. A complexidade está no que ele demonstra te
 - Divisão de gastos
 - Mapa com rota do dia
 - iOS
+
+Cada item tem versão no roadmap (§8).
 
 ---
 
@@ -76,58 +78,96 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 
 ---
 
-## 8. Cronograma — 11 semanas (10–20h/semana)
+## 8. Roadmap
 
-### Semanas 1–2 — Fundação
+Sem prazos: o que importa é a **ordem** e o que entra em cada versão. Cada marco termina com algo rodando em produção. Se algo apertar, a feature muda de versão em vez de ser cortada.
+
+Valem para todos os marcos: responsividade e acessibilidade fazem parte de cada tela, e o código nasce com TDD ([`development.md`](./development.md)).
+
+### v1 — vitrine
+
+#### M1 — Fundação
 - [ ] Monorepo (Bun + Turborepo), Biome, CI básico
 - [ ] Comprar o domínio (Cloudflare Registrar)
 - [ ] Docker Compose (Postgres, Redis)
-- [ ] Auth com Better Auth (e-mail/senha, Google, magic link) + Resend
 - [ ] Schema do banco + migrations (Drizzle)
-- [ ] REST: viagens, membros, convites (link e e-mail)
-- [ ] `packages/core`: tipos e schemas das ops
+- [ ] Auth com Better Auth: e-mail e senha (sem envio de e-mail)
+- [ ] REST: criar e listar viagens
+- [ ] **Deploy mínimo na prod:** CAX11, Caddy, Cloudflare, CI fazendo deploy (1 instância da API)
 - [ ] **Spike de risco:** página Next.js abrindo offline com Serwist
-- [ ] **Decidido:** sobreposição de stops é rígida (D14); falta só a UX de empurrar/preencher (`architecture.md` §19, até a semana 5)
-- [ ] **Design:** telas de celular (até o fim da semana 4)
 
-### Semanas 3–4 — Core, protocolo e motor de sync
-- [ ] `core`: `requirements()` + `decide()` síncrono + mutations (efeitos) para todas as ops, invariantes de stops, ordenação por horário, upcasters
+**No fim:** login e lista de viagens no ar.
+
+#### M2 — Fatia de sync (stops)
+- [ ] `core`: `requirements()` + `decide()` síncrono + mutations (efeitos) para as ops de stop, invariantes de stops, upcasters
 - [ ] Servidor WebSocket: `hello`/`welcome`, `op`, `ack`, `reject`, `resync`, ticket de auth
-- [ ] Pipeline de ops (lock por viagem, prefetch, `op_receipts`, `ops_log` com efeitos, `field_meta`, ops de sistema de membros)
+- [ ] Pipeline de ops (lock por viagem, prefetch, `op_receipts`, `ops_log` com efeitos)
 - [ ] `packages/sync`: confirmado + pendentes, rebase, buffer de ordem, portas Transport/Storage/Clock
-- [ ] **Testes unitários** + **property-based** (N clientes, entrega aleatória → convergem)
-- [ ] **Integração**: N clientes WS concorrentes contra a API real
+- [ ] Overview básica (lista de stops; adicionar, editar e remover) + busca de lugares (Photon) + toast de `stop_overlap`
+- [ ] **Testes:** unitários, **property-based** (N clientes, entrega aleatória → convergem) e **integração** (N clientes WS contra a API real)
+- [ ] **Homologação sob demanda** (`deploy.md` §14)
 
-### Semanas 5–7 — Web (mobile-first)
-- [ ] Lista de viagens, nova viagem, convite, join
-- [ ] Overview (timeline de stops, add stop, gaps) + busca de lugares (Photon)
-- [ ] Board por stop (dias, cards por horário, drag entre dias) + CardSheet
-- [ ] Agenda + busca ⌘K
-- [ ] Layouts de celular, drag por toque, sheets em tela cheia
-- [ ] Acessibilidade: drag por teclado, `aria-live`, contraste
+**No fim:** duas abas editando stops juntas, em produção.
 
-### Semana 8 — Presença + escala
-- [ ] Presença: avatares, "editando" (card e campo), cursores e drag ao vivo
-- [ ] Lock de edição por entidade (`lock.acquire/release`, tabela `edit_locks`, `tabId`, conferência na transação) + UI "Ana is editing"
-- [ ] Redis pub/sub + 2 instâncias da API atrás do Caddy
+#### M3 — Plano completo
+- [ ] `core` e pipeline para as ops de dias e atividades, ordenação por horário
+- [ ] Board por stop (dias, atividades por horário) + CardSheet
+- [ ] Drag & drop: mouse, toque, teclado e "Mover para…"
+
+**No fim:** uma viagem inteira planejada no app.
+
+#### M4 — Colaboração
+- [ ] Infra de e-mail: Resend, domínio verificado, templates
+- [ ] Convites: link (papel, expira em 7 dias, reset) e e-mail (reenviar, aceitar/recusar); join
+- [ ] "Forgot password"
+- [ ] Membros como ops de sistema (entrar, sair, trocar papel)
+- [ ] Presença: avatares e "editando" (card e campo)
+- [ ] Lock de edição por entidade (`lock.acquire/release`, tabela `edit_locks`, `tabId`, conferência na transação) + UI "Ana is editing" + toast de `locked` com *Restore with my change*
+
+**No fim:** duas pessoas planejando juntas de verdade.
+
+#### M5 — Escala e resiliência
+- [ ] Redis pub/sub + 2 instâncias da API atrás do Caddy; rolling deploy
 - [ ] Teste: clientes em instâncias diferentes convergem e o lock é exclusivo entre instâncias
-
-### Semana 9 — Resiliência
-- [ ] Cache de leitura (IndexedDB) + Service Worker: abrir o plano offline em só leitura
 - [ ] Reconexão com `lastVersion`, backoff, status Synced/Syncing/Offline + banner "viewing only"
+- [ ] Cache de leitura (IndexedDB) + Service Worker: abrir o plano offline em só leitura
 - [ ] Teste de compat de protocolo (API N e N+1 lado a lado, fixtures N−1)
 - [ ] **Chaos test** (toxiproxy): derrubar instância, Redis e rede no meio de edições → nada se perde
 
-### Semana 10 — Folga + polimento
-- [ ] Toasts de rejeição (`deleted`, `locked`, `stop_overlap`) com *Restore with my change*; feed "All activity"
-- [ ] Folga do cronograma (o painel de conflitos saiu do escopo)
+**No fim:** a parte técnica completa.
 
-### Semana 11 — Lançamento
-- [ ] Deploy de produção na VPS (cloud-init/OpenTofu, pipeline rolling, backups no R2, Grafana Cloud)
-- [ ] Load test com k6 (inclui o fan-out de cursores e a renovação de locks) → registrar números no README e na landing
+#### M6 — Lançamento
+- [ ] "Try the demo": sessão anônima com uma viagem pronta (o seed)
+- [ ] Infra completa: OpenTofu, backups no R2, Grafana Cloud, Sentry, UptimeRobot
+- [ ] Upgrade para CAX21 + load test com k6 (inclui a renovação de locks) → números no README e na landing
 - [ ] README: arquitetura, diagrama, decisões e trade-offs, como rodar local
 - [ ] GIF/vídeo: 3 navegadores editando juntos + chaos demo
 - [ ] Post no LinkedIn + projeto em destaque no perfil
+
+**No fim:** a vitrine pronta.
+
+### v1.x
+- **Agenda** (linha do tempo do dia, "agora" e "up next"), junto com o fuso horário do stop
+- Login com Google e Apple
+- Busca ⌘K na viagem
+- Cursores e drag ao vivo
+- Timeline por mês na Overview
+- Feed "All activity"
+- Homologação que acorda ao acessar (Cloudflare Worker)
+
+### v2
+- **Android (Expo):** Agenda + Board + CardSheet sobre `packages/sync`; checklist em `architecture.md` §16
+- **Mapa** com rota do dia (MapLibre + OpenFreeMap, D27)
+- **Documentos/anexos** (R2/MinIO, presigned upload) + offline por arquivo/stop/viagem
+- Histórico / "desfazer" usando o ops log
+- Transporte como entidade
+- Papel *viewer* (só leitura)
+
+### v3+
+- Chat do grupo
+- Votação em atividades
+- Divisão de gastos multi-moeda
+- iOS
 
 ---
 
@@ -153,21 +193,9 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 
 | Risco | Mitigação / corte |
 |---|---|
-| Sync engine demorar mais | É prioridade; se atrasar, cortar ⌘K, drag ao vivo e Google OAuth no primeiro deploy |
-| Next.js offline (Service Worker) | Spike na semana 2; plano B: rotas do app como SPA estática servida pelo SW; plano C: sem offline no MVP (só o banner) |
+| Sync engine demorar mais | É prioridade; ⌘K, drag ao vivo e login social já estão na v1.x. Se atrasar mais, outras features mudam de versão (§8) |
+| Next.js offline (Service Worker) | Spike no M1; plano B: rotas do app como SPA estática servida pelo SW; plano C: sem offline no MVP (só o banner) |
 | Overview (timeline) trabalhosa | Primeiro uma lista simples de stops; a timeline por mês vem depois |
-| Responsivo completo atrasar | Drag por toque vira "mover para dia X" por menu no celular; o resto fica |
+| Responsivo completo atrasar | O drag por toque pode esperar: o "Mover para…" (exigido pela WCAG) já cobre o celular |
 | Faltar design de celular | Derivar dos componentes desktop; revisar depois |
-| Escopo crescer | Tudo fora da seção 3 vai para o backlog v2 |
-
----
-
-## 11. Backlog v2
-- **Android (Expo)**: Agenda + Board + CardSheet sobre `packages/sync`; checklist em `architecture.md` §16
-- **Documentos/anexos** (R2/MinIO, presigned upload) + offline por arquivo/stop/viagem
-- Histórico / "desfazer" usando o ops log
-- Chat do grupo
-- Votação em atividades
-- Divisão de gastos multi-moeda
-- Mapa com rota do dia
-- iOS
+| Escopo crescer | Tudo fora da seção 3 vai para uma versão seguinte do roadmap (§8) |
