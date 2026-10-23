@@ -1,7 +1,7 @@
 # Caravan — Arquitetura
 
 > Documento técnico de referência. O produto, o escopo e o cronograma estão em [`planner.md`](./planner.md); as telas, em [`design/`](./design).
-> Última revisão: 2026-10-16.
+> Última revisão: 2026-10-16. Vocabulário do domínio: [`CONTEXT.md`](../CONTEXT.md).
 
 ---
 
@@ -10,16 +10,30 @@
 | # | Decisão | Motivo |
 |---|---|---|
 | D1 | **Servidor autoritativo com ops versionadas** (não CRDT) | O problema de consistência fica visível e testável no backend |
-| D2 | Hierarquia **Trip → Stop → Day (data) → Card** | O design organiza a viagem em stops (Overview) |
-| D3 | **Dias são datas**, não entidades livres | Vêm de `trip.startDate..endDate`; sem `day.create/delete/reorder` |
-| D4 | **Cards ordenados por horário**; posição fracionária só desempata | Roteiro é cronológico; o design sempre mostra em ordem de hora |
+| D2 | Hierarquia **Trip → Stop → Day → Activity** | O design organiza a viagem em stops (Overview) |
+| D3 | **Dias não são entidades livres**: são os índices de um stop (`0..noites-1`) | Vêm das datas do stop; sem `day.create/delete/reorder` (revisada em D12) |
+| D4 | **Atividades ordenadas por horário**; posição fracionária só desempata | Roteiro é cronológico; o design sempre mostra em ordem de hora |
 | D5 | Um único **`packages/core`** decide as ops no cliente e no servidor | As regras não divergem; a lógica fica 100% testável sem I/O |
-| D6 | Conflitos detectados **no servidor** e guardados **por usuário** | Base do painel "What changed" (Use mine / Keep Leo's / Restore) |
-| D7 | **Documentos/anexos ficam para a v2** | Corte de escopo; offline no MVP = o plano, não os arquivos |
+| D6 | ~~Conflitos detectados no servidor e guardados por usuário~~ | **Substituída pela D22** (lock de edição): sem edição offline, não há conflito para guardar |
+| D7 | **Documentos/anexos ficam para a v2** | Corte de escopo; offline no MVP = ver o plano, não os arquivos |
 | D8 | **Android fica para depois**, mas tudo fora de `apps/web` é agnóstico de plataforma | O app mobile tem de ser "só UI" quando chegar |
 | D9 | Better Auth (e-mail+senha, Google, magic link) | Cobre todas as telas de auth; adapter Drizzle; plugin Expo para depois |
 | D10 | Lugares via **Photon** (OSM) com proxy na API | A política do Nominatim proíbe autocomplete |
 | D11 | **Tudo numa VPS ARM** (web + API + Postgres + Redis), mesma origem, Caddy + Cloudflare | Latência do lock, custo e um compose que reproduz a prod. Detalhes em [`deploy.md`](./deploy.md) |
+| D12 | **Atividade ancorada no stop** (`stopId + dayIndex`), não numa data absoluta | Mover, esticar ou empurrar um stop é 1 op e leva as atividades junto; a data é derivada (`stop.arriveDate + dayIndex`) |
+| D13 | **Dia que some não rejeita nem move atividades**: elas ficam "fora das datas" do stop | Atividade criada num dia removido ao mesmo tempo não se perde; encurtar é reversível |
+| D14 | **Sobreposição de stops é invariante rígida**: o servidor rejeita e o formulário reabre com os dados do usuário | A Overview nunca mostra estado inválido; só se criam atividades num stop já confirmado, então nada depende de um stop rejeitado |
+| D15 | **O servidor transmite efeitos, não só ops**: `ack`, broadcast e `welcome` levam `effects: Mutation[]`; o `confirmed` do cliente só aplica | Clientes de versões diferentes não divergem; valores do servidor chegam prontos; `decide` no cliente só serve à view otimista. Hash de estado só nos testes |
+| D16 | **Toda op decidida ganha recibo** (`op_receipts`), inclusive as rejeitadas | Reenvio depois de uma queda de conexão não muda o resultado; "mesma resposta para o mesmo `opId`" vira propriedade testável |
+| D17 | **`decide` síncrono em duas fases**: `requirements(op)` → prefetch na API → `decide` | `core` puro e síncrono nos dois lados; I/O por op explícito e mínimo dentro do lock |
+| D18 | **Membros e exclusão da viagem são ops de sistema** no mesmo log versionado | Ordem total entre plano e permissões; membros visíveis offline; feed e broadcast de graça |
+| D19 | **Sem snapshots no MVP**; `ops_log` e tombstones retidos, recibos por 7 dias | O `welcome` com estado sai da projeção; pendentes só vivem em memória (segundos), então o recibo não precisa durar mais |
+| D20 | ~~A aba que cria a op grava no IndexedDB antes de avisar a líder~~ | **Substituída pela D23**: sem fila persistida, não há líder nem fila no IndexedDB |
+| D21 | **`Activity` no domínio e no protocolo**; "card" é só o componente visual (`ActivityCard`, `CardSheet`) | O nome do tipo de op é contrato (P7); a Agenda e o mobile não mostram cards. Glossário em [`CONTEXT.md`](../CONTEXT.md) |
+| D22 | **Lock de edição por entidade**: só uma pessoa edita uma atividade, um stop, um título de dia ou o cabeçalho da viagem por vez | Elimina conflitos de escrita concorrente na origem; a UI mostra "Ana is editing" e bloqueia o resto |
+| D24 | **Locks de edição no Postgres** (`edit_locks`), conferidos **dentro da transação** da op; Redis só para o efêmero | O que é promessa do produto fica no banco, o que é efêmero fica no Redis. Sem janela de corrida, e o lock continua valendo com o Redis fora do ar |
+| D25 | **Ajustes de desempenho do caminho quente**: lock conferido na mesma ida ao banco do prefetch; renovação de locks em lote por instância; `edit_locks` `UNLOGGED` sem índice em `expires_at`; entrega local pelo pub/sub nativo do Bun | O lock no Postgres custa ~0,1 ms numa edição de 50–200 ms; o gargalo real é o fan-out dos cursores, atacado com o pub/sub nativo |
+| D23 | **Offline só leitura**: o plano fica em cache (IndexedDB + Service Worker) para consulta; editar exige conexão | Mantém o valor no aeroporto/roaming sem fila offline, rebase de longa duração nem conflitos persistidos |
 
 ---
 
@@ -45,7 +59,7 @@
                     │        broadcast, cache)  │
                     ▼                           ▼
              ┌──────────────────────────────────────────┐
-             │ PostgreSQL — projeção + ops_log          │
+             │ PostgreSQL — projeção + ops_log + locks  │
              └──────────────────────────────────────────┘
 ```
 
@@ -79,21 +93,21 @@ infra/
 Trip        id, name, startDate, endDate, ownerId
 Member      tripId, userId, role (owner|editor), color, lastSeenAt
 Stop        id, name, place, countryCode, arriveDate, leaveDate, color, transportIn (train|flight|ferry|bus|car|null)
-Day         (tripId, date), title                       — existe implicitamente para cada data da viagem
-Card        id, date, title, time {start, end?} | null, place | null, notes, position
+Day         (stopId, dayIndex), title                   — existe implicitamente para cada dia do stop (0..noites-1)
+Activity    id, stopId, dayIndex, title, time {start, end?} | null, place | null, notes, position
+            data derivada = stop.arriveDate + dayIndex (D12)
 ```
 
 **Invariantes** (validadas em `core`):
-- Stops ficam dentro das datas da viagem, `arriveDate < leaveDate`, e **não se sobrepõem** (intervalo semiaberto `[arrive, leave)`).
-- O stop de um dia é derivado: o stop em que `arrive ≤ date < leave`. Dia sem stop = "gap" na Overview.
-- `trip.update` que deixe um stop ou card fora das datas → rejeitado.
-- Encurtar um stop com cards nos dias removidos → rejeitado (`stop_has_cards`); o usuário move os cards antes.
-- `stop.delete` faz soft-delete do stop **e dos cards dele na mesma op**; `stop.restore` restaura só os cards apagados por aquela op (`deletedVersion`).
-- Editar ou mover entidade excluída → rejeitado + registro de conflito (seção 7).
+- Stops ficam dentro das datas da viagem, `arriveDate < leaveDate`, e **não se sobrepõem** (intervalo semiaberto `[arrive, leave)`). Invariante **rígida** (D14): `stop.create`/`stop.update` que a viole é rejeitado (`stop_overlap` / `outside_trip`) e a UI reabre o formulário com os dados digitados.
+- Atividade e título de dia pertencem a um stop (D12). Data sem stop = "gap" na Overview e não tem Board nem atividades. Só se criam atividades num stop **já confirmado** pelo servidor (o Board de um stop novo abre depois do `ack`).
+- Ops de stop **nunca reescrevem** o `dayIndex` das atividades (D13). Atividade com `dayIndex ≥ noites do stop` fica **fora das datas**: aparece na seção "Outside the stop's dates" do Board e num aviso na Overview; esticar o stop de novo a traz de volta. Encurtar ou deslocar um stop é sempre aceito; não existe `stop_has_cards`.
+- `trip.update` é sempre aceito: stop que fique fora das novas datas da viagem vira aviso na Overview, não rejeição.
+- `stop.delete` faz soft-delete do stop **e das atividades dele na mesma op**; `stop.restore` restaura só as atividades apagadas por aquela op (`deletedVersion`). Se, entretanto, as datas do stop foram ocupadas, o `stop.restore` é rejeitado (`stop_overlap`) e a UI oferece restaurar com novas datas.
+- Editar ou mover entidade excluída → rejeitado (`deleted`); a UI mostra o toast com *Restore with my change* a partir do rascunho em memória (seção 7).
 
-**Ordem dos cards num dia:** `(time.start NULLS LAST, position, id)`. Arrastar para outro dia muda a `date`; a posição (`fractional-indexing`) só importa entre cards sem horário ou com o mesmo horário.
+**Ordem das atividades num dia:** `(time.start NULLS LAST, position, id)` dentro de `(stopId, dayIndex)`. Arrastar para outro dia muda `stopId`/`dayIndex`; a posição (`fractional-indexing`) só importa entre atividades sem horário ou com o mesmo horário.
 
-**Campos de conflito:** `time` (start+end) é **um** campo; `date` também é campo (move é LWW como edição). Para stops, `dates` (arrive+leave) é um campo.
 
 ---
 
@@ -106,35 +120,46 @@ type Op =
   | { type: "stop.update";  stopId: Id; fields: Partial<{ name; place; dates; color; transportIn }> }
   | { type: "stop.delete";  stopId: Id }
   | { type: "stop.restore"; stopId: Id }
-  | { type: "day.update";   date: ISODate; fields: { title: string } }
-  | { type: "card.create";  cardId: Id; date: ISODate; title: string; time?: TimeRange; place?: Place; notes?: string; position: string }
-  | { type: "card.update";  cardId: Id; fields: Partial<{ title; time; place; notes }>; resolves?: ConflictId }
-  | { type: "card.move";    cardId: Id; date: ISODate; position: string; resolves?: ConflictId }
-  | { type: "card.delete";  cardId: Id }
-  | { type: "card.restore"; cardId: Id; fields?: Partial<{ title; time; place; notes }>; resolves?: ConflictId };
+  | { type: "day.update";   stopId: Id; dayIndex: number; fields: { title: string } }
+  | { type: "activity.create";  activityId: Id; stopId: Id; dayIndex: number; title: string; time?: TimeRange; place?: Place; notes?: string; position: string }
+  | { type: "activity.update";  activityId: Id; fields: Partial<{ title; time; place; notes }> }
+  | { type: "activity.move";    activityId: Id; stopId: Id; dayIndex: number; position: string }
+  | { type: "activity.delete";  activityId: Id }
+  | { type: "activity.restore"; activityId: Id; fields?: Partial<{ title; time; place; notes }> };
 
-type Envelope = { opId: Uuid; tripId: Id; baseVersion: number; op: Op; clientTs: number };
+type Envelope = { opId: Uuid; tripId: Id; op: Op; clientTs: number };
 // O servidor acrescenta userId (da sessão, nunca do cliente) e version.
+
+// Ops de sistema (D18): geradas só pela API, a partir dos endpoints REST; vindas de um cliente → rejeitadas.
+type SystemOp =
+  | { type: "member.join";   userId: Id; role: Role; color: MemberColor }
+  | { type: "member.remove"; userId: Id }
+  | { type: "member.role";   userId: Id; role: Role }        // inclui transferência de posse (2 mutations)
+  | { type: "trip.delete" };
 ```
 
-IDs gerados no cliente (UUIDv7), para a criação offline funcionar.
+IDs gerados no cliente (UUIDv7), para a UI otimista referenciar a entidade antes do `ack`.
 
 ### Núcleo funcional: `decide` → `mutations`
 
 ```ts
-interface TripReader {            // cliente: estado em memória. servidor: queries SQL na transação
-  trip(): Trip; stop(id): Stop | null; stops(): Stop[]; card(id): Card | null; cardsOn(date): Card[];
-  fieldMeta(entity, id): FieldMeta;   // { [field]: { v: number; by: UserId } }
+requirements(envelope): ReadSet   // o que decide vai ler: ids de stops/atividades, "todos os stops"
+
+interface TripReader {            // SÍNCRONO. cliente: estado em memória. servidor: rows do ReadSet buscadas na tx (D17)
+  trip(): Trip; stop(id): Stop | null; stops(): Stop[]; activity(id): Activity | null; activitiesOn(stopId, dayIndex): Activity[];
 }
 
-decide(reader, envelope, userId): { ok: true; mutations: Mutation[]; conflicts: ConflictDraft[] }
-                                | { ok: false; reason: RejectReason; conflict?: ConflictDraft }
+decide(reader, envelope, userId): { ok: true; mutations: Mutation[] }
+                                | { ok: false; reason: RejectReason }
 ```
 
-- **Cliente:** `applyMutations(state, mutations)` em memória (ignora `conflicts`).
+- **Cliente:** `applyMutations(view, mutations)` em memória, **só para a view otimista das pendentes**. O `confirmed` nunca re-decide: aplica os `effects` que o servidor manda (D15).
 - **Servidor:** `persistMutations(tx, mutations)` vira os `UPDATE`/`INSERT` na projeção.
+- **Fronteira (D17):** `core` declara o que precisa (`requirements`) e decide; `apps/api` busca e grava. No servidor, o reader de prefetch **lança erro** ao acessar uma chave fora do `ReadSet`, e os testes de propriedade rodam com ele para pegar `requirements` incompletos.
 
 O mesmo código decide nos dois lados ("functional core, imperative shell"). É a parte mais testada do projeto.
+
+**Efeitos são o contrato do protocolo (D15).** As `Mutation`s são declarativas e trazem os valores que só o servidor conhece (`deletedAt`, `deletedVersion`, `deletedBy`). Cascatas usam mutations agregadas (`softDeleteActivitiesOfStop { stopId, version }`) para caber no limite de mensagem. O schema das mutations só muda de forma aditiva.
 
 ---
 
@@ -142,18 +167,21 @@ O mesmo código decide nos dois lados ("functional core, imperative shell"). É 
 
 | Dir. | Mensagem | Conteúdo |
 |---|---|---|
-| C→S | `hello` | `tripId`, `lastVersion \| null`, `ticket` |
-| S→C | `welcome` | `currentVersion`, `mode: "ops" \| "state"`, `ops[]` ou `state`, `presence[]`, `conflicts[]` (pendentes do usuário) |
+| C→S | `hello` | `tripId`, `lastVersion \| null`, `ticket`, `protocolVersion` |
+| S→C | `welcome` | `currentVersion`, `mode: "ops" \| "state"`, `ops[]` (com `effects`) ou `state`, `presence[]`, `locks[]` |
 | C→S | `op` | `Envelope` |
-| S→C | `ack` | `opId`, `version` |
-| S→C | `reject` | `opId`, `reason`, `conflictId?` |
-| S→C | `op` | `{ version, opId, userId, op }` (de outros clientes) |
+| S→C | `ack` | `opId`, `version`, `effects` |
+| S→C | `reject` | `opId`, `reason` |
+| S→C | `op` | `{ version, opId, userId, op, effects }` (de outros clientes; `op` serve ao feed, `effects` ao estado) |
 | C→S | `resync` | `fromVersion` (detecção de buraco) |
-| S→C | `conflict` | registro novo para este usuário |
+| C→S | `lock.acquire` / `lock.release` | `{ entity, id }` (seção 7) |
+| S→C | `lock.granted` / `lock.denied` | `{ entity, id }` / `{ entity, id, holder: userId }` |
+| S→C | `lock` / `lock.free` | lock pego ou solto por outra pessoa (vira o "Ana is editing") |
 | C→S | `presence` | estado efêmero (seção 8) |
 | S→C | `presence` / `presence.leave` | estado dos outros |
-| C↔S | `ping` / `pong` | `pong` traz `currentVersion` |
+| C↔S | `ping` / `pong` | `pong` traz `currentVersion`; o `ping` renova os locks da conexão |
 
+- **Versão do protocolo:** o servidor aceita a atual e a anterior; mais velho → `upgrade_required`, mais novo → `server_behind` (o cliente fica em só leitura e tenta de novo). Tipos novos de op/efeito são lidos um release antes de serem emitidos (`deploy.md` P7).
 - **Autenticação do WS:** o cliente pega um *ticket* curto (60 s, assinado) em `POST /ws-ticket` usando a sessão (cookie na web, bearer no mobile) e manda no `hello`. Assim o token não vai na query string.
 - O servidor processa as mensagens de cada conexão **em série**, o que preserva a ordem das ops de um mesmo cliente.
 
@@ -163,47 +191,64 @@ O mesmo código decide nos dois lados ("functional core, imperative shell"). É 
 
 ```
 recebe op
- ├─ valida schema (Zod) e papel do membro
+ ├─ rate limit, tamanho e schema (Zod)        → reject transitório, sem recibo (o cliente reenvia)
  ├─ BEGIN
  │   SELECT current_version FROM trips WHERE id = $1 FOR UPDATE      -- serializa por viagem, entre instâncias
- │   SELECT 1 FROM ops_log WHERE op_id = $2  → se existe: ack com a versão já gravada (idempotência)
- │   decide(sqlReader, envelope, userId)
- │     rejeitado → grava conflict (se houver), COMMIT, envia reject
+ │   SELECT * FROM op_receipts WHERE op_id = $2  → se existe: repete a MESMA resposta (D16)
+ │       aceita: ack { version, effects do ops_log } · rejeitada: reject { reason }
+ │   papel do membro (dentro da tx: enxerga remoção/troca de papel já comitada)
+ │   prefetch(requirements(envelope)) → reader síncrono (1–2 queries; a mesma ida ao banco traz os locks das entidades lidas)
+ │   lock de edição (D24): update/move/delete → a entidade não pode ter lock válido de outra aba
+ │   decide(prefetchReader, envelope, userId)
+ │     rejeitado → op_receipts(rejected), COMMIT, envia reject
  │   version = current + 1
- │   persistMutations(tx) + atualiza field_meta { v: version, by: userId }
- │   INSERT ops_log; INSERT conflicts; UPDATE trips SET current_version = version
+ │   persistMutations(tx)
+ │   INSERT ops_log; INSERT op_receipts(accepted, version); UPDATE trips SET current_version = version
  ├─ COMMIT
  ├─ ack → autor
- ├─ PUBLISH trip:{id}  { version, opId, userId, op }
- └─ PUBLISH user:{loserId} { conflict }   (se gerou conflito)
+ └─ PUBLISH trip:{id}  { version, opId, userId, op, effects }
 ```
 
 O lock é por linha de `trips`: viagens diferentes não disputam lock entre si.
 
+**Decisão única por `opId` (D16):** toda op que chega à transação ganha um recibo, aceita ou rejeitada. Reenvios (depois de uma queda de conexão) recebem sempre a mesma resposta. Rejeições finais: `forbidden`, `locked`, `deleted`, `stop_overlap`, `outside_trip`. (`locked` é final para aquela op; o rascunho continua na tela e a pessoa tenta de novo quando o lock liberar, gerando uma op nova.) Transitórias (sem recibo, antes do BEGIN): rate limit, tamanho, schema, servidor ocupado.
+
 ---
 
-## 7. Conflitos
+## 7. Edição concorrente: lock de edição (D22)
 
-O servidor continua LWW por campo, na ordem de chegada. A diferença é que **quem perdeu não perde o dado**: o valor substituído fica guardado num registro de conflito.
+Não existe conflito de escrita: **só uma pessoa edita uma coisa por vez**. A consistência entre ops continua garantida pelo Postgres (versão + `FOR UPDATE`); o lock de edição é a garantia de UX de que ninguém sobrescreve o que outra pessoa está editando.
 
-**Detecção em `decide`**:
+**Granularidade: entidade.** Atividade, stop, título de dia (`stopId + dayIndex`) e cabeçalho da viagem (nome e datas). O indicador "editando o campo X" continua na presença (seção 8), mas o lock é da entidade inteira.
 
-| Situação | Condição | Registro para |
-|---|---|---|
-| Escrita concorrente no mesmo campo | `fieldMeta[f].v > baseVersion` **e** `fieldMeta[f].by ≠ autor` | o autor anterior (`kind: field_overwritten`, `mine` = valor antigo, `theirs` = novo) |
-| Editar/mover card excluído | card com `deletedAt` | o próprio autor; op **rejeitada** (`kind: edit_on_deleted`, `mine` = campos tentados) |
-| Excluir card editado concorrentemente | algum `fieldMeta[f].v > baseVersion` de outro usuário | esse usuário (`kind: deleted_after_edit`) |
+| Ação na UI | Lock |
+|---|---|
+| Abrir o CardSheet em edição, focar um campo inline | `lock.acquire` da atividade (ou do dia, do stop, da viagem) |
+| Arrastar uma atividade, redimensionar um stop | lock da entidade no início do drag |
+| Excluir | lock da entidade; `stop.delete` também é negado se alguma atividade do stop estiver com outra pessoa |
+| Criar | não precisa (a entidade ainda não existe) |
+| Fechar o sheet, blur, soltar o drag | `lock.release` |
 
-**Detalhe importante:** a `baseVersion` de uma op feita offline **não muda no rebase**. Ela representa o que o autor sabia quando editou. Atualizá-la esconderia a concorrência.
+**Mecânica (D24: no Postgres):**
+- Tabela **`UNLOGGED`** `edit_locks (trip_id, entity, entity_id, user_id, tab_id, expires_at)`, PK `(trip_id, entity, entity_id)`. Todo horário vem do `now()` do Postgres (um relógio só).
+  - `UNLOGGED`: não passa pelo WAL, então é mais rápida. Se o Postgres travar, a tabela volta vazia: aceitável, porque os locks venceriam em 15 s de qualquer jeito e as abas pedem de novo ao reconectar.
+  - **Sem índice em `expires_at`** (nem em outra coluna que muda): a renovação vira *HOT update* (a linha é atualizada no lugar) e a tabela não incha. Índice só em `tab_id`, que não muda.
+- **Pegar:** `INSERT … ON CONFLICT DO UPDATE … WHERE edit_locks.expires_at < now() OR edit_locks.tab_id = excluded.tab_id RETURNING`. Voltou linha → `lock.granted`; não voltou → `lock.denied { holder }` e a UI fica em só leitura para aquela entidade ("Ana is editing").
+- **Renovar em lote, por instância:** a cada ~5 s, cada instância faz **um** `UPDATE edit_locks SET expires_at = now() + 15 s WHERE tab_id = ANY($1)` com as abas conectadas a ela que estão vivas (responderam ao `ping`). O custo é constante (≈ 2 queries a cada 5 s no total), não importa quantas pessoas estejam editando. Aba fechada, rede caída ou instância morta = o lock expira sozinho em ≤ 15 s. Linhas expiradas são apagadas de forma preguiçosa (no próprio `INSERT`) e por uma limpeza periódica.
+- **Dono = aba, não conexão:** cada aba gera um `tabId` (guardado no `sessionStorage`) e o reaproveita nas reconexões. Se a conexão cai e volta em < 15 s (ou o deploy fecha o WS com 1012), a aba **retoma o próprio lock** em vez de ser bloqueada por ele.
+- **Soltar:** `lock.release` faz `DELETE`. Membro removido (`member.remove`) → os locks dele são apagados na mesma transação.
+- **Inatividade:** 2 min sem input com o lock aberto → o cliente solta o lock e a UI mostra "Editing paused" (evita alguém prender um card deixando a aba aberta).
+- **O pipeline confere o lock dentro da transação** da op (depois do `FOR UPDATE`): update/move/delete de uma entidade com lock válido de **outra aba** → `reject { reason: "locked" }`. `stop.delete` também confere os locks das atividades do stop. Não sobra janela de corrida entre a checagem e o COMMIT.
+- **Avisar os outros:** pegar e soltar publicam `lock`/`lock.free` no pub/sub do Redis (é o que acende o "Ana is editing" ao vivo). O `welcome` traz os locks válidos lidos do Postgres.
+- **Redis fora do ar:** o lock **continua valendo** (está no Postgres). Só some o aviso ao vivo; quem tentar editar recebe `lock.denied { holder }` na hora e a UI mostra "Ana is editing" do mesmo jeito.
 
-**Resolução:**
-- *Use mine* → `card.update { fields: mine, resolves }`.
-- *Keep theirs* / *Let it go* → `POST /conflicts/:id/dismiss`.
-- *Restore with my change* → `card.restore { fields: mine, resolves }`.
+**Rejeições restantes e o que a UI faz** (o conteúdo do usuário ainda está em memória):
+- `deleted` (a entidade foi excluída por cascata de `stop.delete`): toast "Leo deleted this stop · Restore with my change".
+- `stop_overlap` / `outside_trip`: o formulário de stop reabre com os dados e o aviso.
+- `locked`: toast "Ana is editing this"; o rascunho fica no campo até o lock liberar.
+- `forbidden`: aviso e saída da viagem.
 
-Conflitos são **estado privado do usuário**: não entram no `ops_log` nem consomem versão. O `ops_log` é o estado compartilhado e alimenta a aba "All activity".
-
-**Conflito durante a edição** (ConflictField): se chega uma op remota mudando o campo que o usuário está editando com rascunho local, a UI mostra o aviso inline antes de enviar. Isso é só cliente.
+O `ops_log` continua alimentando o feed "All activity".
 
 ---
 
@@ -216,7 +261,8 @@ Dois níveis, ambos só em Redis:
 | **Estável** | online, `editing: { entity, id, field }` | hash `presence:{tripId}`, campo `{userId}:{connId}` com TTL por campo (`HEXPIRE`, Redis ≥ 7.4), renovado no heartbeat |
 | **Volátil** | cursor, drag em andamento, resize de stop | só `PUBLISH`, throttle de 50 ms, nada gravado |
 
-- **Coordenadas do documento**, não da tela: `{ anchor: { kind: "day", date } | { kind: "card", id }, dx, dy }` em frações do elemento. Telas de tamanhos diferentes veem o cursor no mesmo lugar.
+- O **lock de edição** (seção 7) é separado da presença e fica no Postgres (D24): a presença diz *onde* a pessoa está (inclusive o campo) e pode sumir sem problema; o lock diz *quem pode escrever* e não pode.
+- **Coordenadas do documento**, não da tela: `{ anchor: { kind: "day", stopId, dayIndex } | { kind: "activity", id }, dx, dy }` em frações do elemento. Telas de tamanhos diferentes veem o cursor no mesmo lugar.
 - Várias abas do mesmo usuário = várias `connId`. A UI agrupa por usuário.
 - `trip_members.last_seen_at` é gravado no disconnect ("Last seen 2 days ago").
 - A lista de viagens ("Ana and Leo are here") lê os hashes com pipeline no `GET /trips`.
@@ -225,7 +271,8 @@ Dois níveis, ambos só em Redis:
 
 ## 9. Broadcast entre instâncias e ordem
 
-- Cada instância assina `trip:{id}` quando a 1ª conexão local entra na viagem e cancela quando a última sai. Também assina `user:{id}` para os usuários conectados.
+- Cada instância assina `trip:{id}` no Redis **uma vez** quando a 1ª conexão local entra na viagem e cancela quando a última sai.
+- **Entrega local pelo pub/sub nativo do Bun:** cada conexão faz `ws.subscribe("trip:{id}")` no Elysia; a instância recebe do Redis e repassa com `server.publish("trip:{id}", msg)`, feito em código nativo, sem laço em JS. É o caminho mais quente do sistema (cursores: ~400 msg/s por viagem cheia × 19 destinatários), bem mais que ops e locks.
 - **A ordem não é garantida:** a instância A comita a v5, a B comita a v6, e a B pode publicar primeiro. Além disso, o pub/sub do Redis é *at-most-once*.
 - **O cliente é responsável:** mantém um buffer das ops com `version > confirmed + 1`. Se o buraco durar mais de ~500 ms, manda `resync { fromVersion }`. O `pong` traz `currentVersion`, então mensagem perdida (Redis caiu, instância morreu) também é detectada.
 
@@ -234,29 +281,29 @@ Dois níveis, ambos só em Redis:
 ## 10. Cliente: `packages/sync`
 
 ```
-confirmed: { version, state }          ← só muda com ops confirmadas, em ordem
-pending:   Envelope[]                  ← ops locais ainda sem ack
+confirmed: { version, state }          ← só muda com efeitos confirmados, em ordem
+pending:   Envelope[]                  ← ops locais ainda sem ack (só em memória; vivem milissegundos)
 view = pending.reduce(apply, confirmed.state)   (memoizado; é o que a UI renderiza)
 ```
 
 | Evento | Efeito |
 |---|---|
-| ação local | `decide` local; se ok, entra em `pending`, é enviada e a view é recalculada |
-| `ack {opId, v}` | aplica a própria op em `confirmed` na versão `v` (respeitando o buffer de ordem) e tira de `pending` |
-| `op` remota `v` | aplica em `confirmed` e recalcula a view (**rebase** das pendentes) |
-| `reject` | tira de `pending`, recalcula, emite evento para a UI ("Your change was undone") |
-| desconexão | backoff exponencial com jitter; status `offline { pending, retryInMs }`; "Retry now" força |
-| reconexão | `hello { lastVersion }` → aplica `welcome` → reenvia `pending` na ordem (duplicatas o servidor ignora pelo `opId`) |
+| ação local | exige conexão e o lock da entidade (D22); `decide` local; se ok, entra em `pending`, é enviada e a view é recalculada |
+| `ack {opId, v, effects}` | aplica os `effects` em `confirmed` na versão `v` (respeitando o buffer de ordem) e tira de `pending` |
+| `op` remota `v` | aplica os `effects` em `confirmed` e recalcula a view |
+| `reject` | tira de `pending`, recalcula, emite evento para a UI com o conteúdo da op (toast da seção 7) |
+| desconexão | **UI em só leitura** (D23); backoff exponencial com jitter; status `offline { retryInMs }`; "Retry now" força. As `pending` em voo continuam em memória |
+| reconexão | `hello { lastVersion }` → aplica `welcome` → reenvia as `pending` em voo (duplicatas o servidor resolve pelo recibo) → pede de novo os locks abertos |
 
 **Portas injetadas** (é o que deixa o pacote pronto para o mobile):
 
 ```ts
 interface Transport { connect(url): Socket }            // web: WebSocket nativo. RN: idem
-interface Storage   { load(tripId); save(tripId, { confirmed, pending }) }   // web: IndexedDB. RN: expo-sqlite
+interface Cache     { load(tripId); save(tripId, confirmed) }   // só leitura offline. web: IndexedDB. RN: expo-sqlite
 interface Clock     { now(); setTimeout(...) }          // fake nos testes
 ```
 
-**Status exposto para a UI:** `synced { version }` · `syncing { sent, total, incoming }` · `offline { pending, retryInMs }`. Ele alimenta o pill do topo, o banner e o popover "Your changes / From others while you were away".
+**Status exposto para a UI:** `synced { version }` · `syncing { incoming }` · `offline { retryInMs }` (só leitura). Ele alimenta o pill do topo e o banner "You're offline — viewing only".
 
 **React:** `sync/react` exporta `useTrip(selector)` sobre `useSyncExternalStore`. Não precisa de Zustand para o estado sincronizado; estado de UI (modais, seleção) fica local.
 
@@ -271,26 +318,25 @@ trip_members   (trip_id, user_id, role, color, joined_at, last_seen_at)         
 invite_links   (token PK, trip_id, role, created_by, expires_at, revoked_at)
 invite_emails  (id, trip_id, email, role, invited_by, created_at, accepted_at, declined_at)
 stops          (id, trip_id, name, place_json, country_code, arrive_date, leave_date, color, transport_in,
-                field_meta jsonb, deleted_at, deleted_by, deleted_version)
-days           (trip_id, date, title, field_meta jsonb)                               PK (trip_id, date)
-cards          (id, trip_id, date, title, time_start, time_end, place_json, notes, position, created_by,
-                field_meta jsonb, deleted_at, deleted_by, deleted_version)
-ops_log        (trip_id, version, op_id UNIQUE, user_id, op_json, created_at)         PK (trip_id, version)
-conflicts      (id, trip_id, user_id, kind, entity_type, entity_id, field, mine_json, theirs_json,
-                other_user_id, version, created_at, resolved_at, resolution)
-snapshots      (trip_id, version, state_json, created_at)                             PK (trip_id, version)
+                deleted_at, deleted_by, deleted_version)
+days           (stop_id, day_index, trip_id, title)                                   PK (stop_id, day_index)
+activities     (id, trip_id, stop_id, day_index, title, time_start, time_end, place_json, notes, position, created_by,
+                deleted_at, deleted_by, deleted_version)
+ops_log        (trip_id, version, op_id UNIQUE, user_id, op_json, effects_json, created_at)  PK (trip_id, version)
+edit_locks     (trip_id, entity, entity_id, user_id, tab_id, expires_at)   UNLOGGED    PK (trip_id, entity, entity_id), índice em tab_id
+op_receipts    (op_id PK, trip_id, user_id, outcome, version, reason, created_at)
 ```
 
-- As tabelas de entidades são a **projeção** (leitura rápida). O `ops_log` é o histórico e a base da reconexão.
-- **Estado completo no `welcome`:** projeção lida numa transação `REPEATABLE READ` junto com `current_version`, o que dá uma foto consistente sem lock.
-- **`snapshots`:** gravado a cada 200 ops, de forma assíncrona e idempotente (PK). Serve para compactar o `ops_log` e para o histórico/undo da v2. Se `current - lastVersion > 500`, o servidor manda o estado em vez das ops.
+- As tabelas de entidades são a **projeção** (leitura rápida). O `ops_log` é o histórico, o feed e a base da reconexão.
+- **Estado completo no `welcome`:** projeção lida numa transação `REPEATABLE READ` junto com `current_version`, o que dá uma foto consistente sem lock. Se `current - lastVersion > 500`, o servidor manda o estado em vez das ops.
+- **Retenção (D19):** `ops_log` e tombstones (`deleted_at`, usados pelo *restore*) ficam; `op_receipts` com mais de 7 dias são apagados (as pendentes só vivem em memória). Sem snapshots no MVP; histórico/undo (v2) pode ser reconstruído dos `effects_json`.
 
 ---
 
 ## 12. Web (Next.js)
 
 - **Rotas públicas** (landing, sign in/up, join) com SSR. **App** (`/trips`, `/t/:id/...`) como client components sobre o `sync`.
-- **Offline:** Service Worker com **Serwist** (precache do shell + rotas do app). Estado e fila em IndexedDB. Este é o maior risco técnico da web: validar cedo (semana 2) com uma página "hello offline".
+- **Offline só leitura (D23):** Service Worker com **Serwist** (precache do shell + rotas do app) e o `confirmed` de cada viagem em cache no IndexedDB. Sem conexão, a UI abre o plano, a Agenda e a busca, mas desabilita a edição. Ainda é o maior risco técnico da web: validar cedo (semana 2) com uma página "hello offline".
 - **Toda regra de negócio passa pela API.** Nada de Server Actions/route handlers com lógica de domínio, senão o mobile não reaproveita.
 - **REST** com cliente **Eden** (tipos inferidos do Elysia) + TanStack Query para lista de viagens, convites e membros.
 - Drag & drop: dnd-kit. Busca ⌘K: índice em memória sobre o estado local (funciona offline). "New places from the map need a connection."
@@ -305,9 +351,8 @@ apps/api/src/
   auth/        Better Auth montado em /api/auth/*, /ws-ticket
   trips/       CRUD de viagem (criação gera trip + owner + v0), membros, papéis
   invites/     links (criar, resetar, aceitar), e-mails (enviar, reenviar, aceitar, recusar)
-  conflicts/   listar, dispensar
   places/      proxy Photon + cache Redis 24h + rate limit por usuário
-  realtime/    gateway WS, pipeline de ops, presença, pub/sub, sqlReader (TripReader)
+  realtime/    gateway WS, pipeline de ops, locks de edição (Postgres), presença, pub/sub, prefetch do ReadSet → TripReader (D17)
   db/          Drizzle schema + migrations (drizzle-kit)
 ```
 
@@ -321,11 +366,11 @@ apps/api/src/
 
 | Nível | O quê | Ferramenta |
 |---|---|---|
-| Unit | `decide` de cada op, invariantes, detecção de conflito, ordenação | bun test |
-| Propriedade | N clientes simulados, ops aleatórias, entrega em ordem aleatória, desconexões → **todos convergem** para o estado do servidor; nenhuma op perdida ou duplicada | bun test + fast-check |
-| Integração | API real + Postgres + Redis; N clientes WS concorrentes em 2 instâncias | bun test + compose |
-| Chaos | derrubar instância, Redis e rede (latência, corte) no meio de edições → zero perda | toxiproxy |
-| E2E | fluxos web (criar viagem, convidar, editar em 2 abas, offline/online) | Playwright |
+| Unit | `decide` de cada op, invariantes, ordenação | bun test |
+| Propriedade | N clientes simulados, ops aleatórias, entrega em ordem aleatória, quedas e reenvios → **todos convergem** para o estado do servidor (hash); nenhuma op perdida ou duplicada; mesma resposta para o mesmo `opId` | bun test + fast-check |
+| Integração | API real + Postgres + Redis; N clientes WS concorrentes em 2 instâncias; exclusividade do lock de edição entre instâncias, inclusive com o Redis parado | bun test + compose |
+| Chaos | derrubar instância, Redis e rede (latência, corte) no meio de edições → nenhuma op confirmada se perde; com o Redis fora, duas pessoas continuam sem conseguir editar a mesma coisa | toxiproxy |
+| E2E | fluxos web (criar viagem, convidar, editar em 2 abas, lock "Ana is editing", abrir offline em só leitura) | Playwright |
 | Carga | conexões simultâneas, p95 do broadcast | k6 |
 
 ---
@@ -353,33 +398,33 @@ Checklist para não fechar portas agora:
 
 - **Documentos/anexos** (CardSheet → Documents, "Today's documents", offline por stop/viagem, Wi-Fi only, "S3 presigned uploads"). Na v2: R2 (prod)/MinIO (local), presign → PUT → op `attachment.add`.
 - **Android** ("Get it on Android" na landing).
-- Telas a ajustar no MVP: remover a seção Documents do CardSheet; os botões "Save X offline", OfflineStop e TripOffline saem; o indicador de offline na lista de viagens sai (o plano é sempre offline); a landing troca "Web + Android" e os chips "S3 presigned uploads" e "Docker · nginx" (agora Caddy); "2 API instances behind nginx" vira "behind Caddy".
+- Telas a ajustar no MVP: remover a seção Documents do CardSheet; os botões "Save X offline", OfflineStop e TripOffline saem; o indicador de offline na lista de viagens sai (o plano é sempre consultável offline); as telas de conflito (ConflictChanges, ConflictDeleted, ConflictField) saem: viram o lock "Ana is editing" e toasts; a tela Offline vira o banner "viewing only"; a landing troca "Web + Android" e os chips "S3 presigned uploads" e "Docker · nginx" (agora Caddy); "2 API instances behind nginx" vira "behind Caddy".
 
 ---
 
 ## 18. Decisões complementares
 
 **Tempo e fuso horário**
-- Horários dos cards = **hora local de parede** (`"09:40"`) + `date`. Nada de UTC no card.
+- Horários das atividades = **hora local de parede** (`"09:40"`) + data derivada (D12). Nada de UTC na atividade.
 - Cada stop guarda `timezone` (IANA), calculado de `lat/lon` com `tz-lookup` (offline, no `core`).
 - "Agora", "in 12 min" e "feitos" da Agenda: relógio do aparelho convertido para o fuso do stop do dia.
 - `time.end < time.start` = atravessa a meia-noite (termina no dia seguinte).
-- Deslocamentos entre fusos (voo Lisboa → Praga): fica para quando o transporte virar entidade. No MVP, o card usa o fuso do stop do dia.
+- Deslocamentos entre fusos (voo Lisboa → Praga): fica para quando o transporte virar entidade. No MVP, a atividade usa o fuso do stop dela.
 
 **Granularidade das edições**
-- Campos de texto geram op no *blur* ou depois de ~800 ms sem digitar. Campos discretos (horário, lugar, mover) geram op na hora.
-- Na fila de pendentes, `card.update` do mesmo card e campo ainda **não enviados** são mesclados (com o `baseVersion` da primeira). Assim, 50 edições offline viram 1 op.
+- Campos de texto geram op no *blur*, depois de ~800 ms sem digitar ou no `pagehide`/`visibilitychange: hidden` (o celular mata abas em segundo plano). Campos discretos (horário, lugar, mover) geram op na hora.
 
 **Abas, contas e armazenamento**
-- Uma aba por viagem é a **líder** (Web Locks API `caravan:sync:{userId}:{tripId}`): ela tem o WS e grava a fila. As outras falam com a líder por `BroadcastChannel`. Se a líder fecha, outra assume o lock.
-- IndexedDB separado por `userId`; logout com pendentes pede confirmação antes de apagar.
-- `navigator.storage.persist()` no primeiro uso offline.
-- No login, sincroniza **todas** as viagens do usuário (o plano está sempre offline).
+- Cada aba tem o próprio WS e um `tabId` estável (no `sessionStorage`). Duas abas do mesmo usuário disputam o lock de edição como duas pessoas; a UI diz "Open in another tab".
+- O cache de leitura no IndexedDB é gravado por qualquer aba, **só se a versão for maior** que a gravada. Cache com formato incompatível é descartado e baixado de novo (é só cache).
+- IndexedDB separado por `userId`; o logout apaga o cache.
+- No login, baixa **todas** as viagens do usuário para o cache (o plano fica consultável offline).
 
 **Membros e permissões em tempo real**
-- Membro removido online: o servidor fecha o WS dele (código 4403) e o cliente apaga a viagem local.
-- Membro removido offline: as ops pendentes voltam como `reject { reason: "forbidden" }`, a fila daquela viagem é descartada e a pessoa vê um aviso.
-- Mudança de papel: a API publica em `user:{id}`, e o gateway atualiza o papel na conexão.
+- Entrar, sair, ser removido, trocar papel, transferir posse e excluir a viagem passam **pelo mesmo pipeline** das ops (lock → `decide` → efeitos → versão), como ops de sistema (D18). Membros fazem parte do `confirmed` e do feed. Convites pendentes ficam fora (REST).
+- Membro removido online: o gateway vê o efeito `member.remove`, solta os locks dele, fecha o WS (código 4403) e o cliente apaga a viagem do cache.
+- Membro removido enquanto estava offline: no próximo `hello` recebe `forbidden`, o cliente apaga a viagem do cache e mostra um aviso.
+- Mudança de papel: o gateway aplica o efeito `member.role` ao papel da conexão; a autorização de cada op é checada dentro da transação, na versão em que ela é decidida.
 - O owner só sai da viagem depois de transferir a posse. A exclusão da viagem é soft-delete (só o owner) e derruba todos os conectados.
 
 **Limites**
@@ -388,7 +433,7 @@ Checklist para não fechar portas agora:
 |---|---|
 | Título | 120 caracteres |
 | Notas | 5.000 caracteres |
-| Cards por viagem | 2.000 |
+| Atividades por viagem | 2.000 |
 | Stops por viagem | 100 |
 | Duração da viagem | 366 dias |
 | Membros por viagem | 20 |
@@ -403,7 +448,7 @@ Checklist para não fechar portas agora:
 - Upgrade do WS valida o `Origin` (Cross-Site WebSocket Hijacking) além do ticket.
 - Textos do usuário são renderizados sempre como texto puro; CSP restritiva no Next.
 - Cookies `HttpOnly; Secure; SameSite=Lax`; mesma origem, sem CORS.
-- Exclusão de conta: remove os dados pessoais e troca o `user_id` no `ops_log`/`conflicts` por um usuário "Deleted user"; as viagens das quais ele é owner passam para o membro mais antigo ou são excluídas se ele estiver sozinho.
+- Exclusão de conta: remove os dados pessoais e troca o `user_id` no `ops_log`/`op_receipts` por um usuário "Deleted user"; as viagens das quais ele é owner passam para o membro mais antigo ou são excluídas se ele estiver sozinho.
 - Páginas de Termos e Privacidade; analytics sem cookie (Umami self-hosted), sem banner.
 
 **Acessibilidade**
@@ -422,8 +467,25 @@ Checklist para não fechar portas agora:
 
 ## 19. Em aberto
 
+> A pauta completa do que falta conversar, com prazos e recomendações, está em [`open-topics.md`](./open-topics.md).
+
 | Questão | Prazo | Contexto |
 |---|---|---|
-| Adicionar ou esticar um stop num período ocupado: empurra os seguintes, só preenche buracos ou pergunta? | **Antes da semana 3** (ops de stop no `core`) | O AddStop diz "adds 2 days", o que sugere empurrar. Até decidir, o `core` rejeita a sobreposição |
+| Adicionar ou esticar um stop num período ocupado: empurra os seguintes, só preenche buracos ou pergunta? | **Antes da semana 5** (UI da Overview) | Só UX: a invariante já é rígida (D14). Empurrar seria uma op explícita (`stops.shift`), barata com a D12 |
 | Telas de celular no design | **Antes da semana 5** | O design atual é só desktop (1440 px) |
 | Transporte como entidade (horário de partida e chegada, fuso de origem e destino) | v2 | Hoje é só o ícone em `stop.transportIn` |
+| Assimetria das datas da viagem: `trip.update` que deixa stops de fora é aceito (aviso), mas `stop.create` fora da viagem é rejeitado (D14). Derivar as datas da viagem dos stops? | Antes da semana 3 | Hoje é aceitável: cada op valida só o que ela muda |
+| Lock de edição: TTL de 15 s e inatividade de 2 min são padrões iniciais | Semana 8 | Ajustar com o uso real; ver seção 7 |
+| Papel **viewer** (só leitura) | Backlog | Não muda a arquitetura: `decide` já checa papel na transação (D18) |
+
+**Dependem de protótipo ou teste (não dá para decidir no papel):**
+
+| Questão | Como validar | Quando |
+|---|---|---|
+| Next.js + Serwist abre o app offline (já previsto) | Spike "hello offline" | Semana 2 |
+| `requirements` (D17) cobre tudo que o `decide` lê | Reader de prefetch que lança erro + fast-check com todas as ops | Semana 3–4 |
+| Custo do lock por op com prefetch (alvo ≤ 2 ms p95 no mesmo host) | Microbenchmark do pipeline com 2.000 atividades | Semana 4 |
+| Tamanho dos `effects` de cascata cabe em 64 KB (`stop.delete` com 135 atividades) | Teste de integração com a viagem do design | Semana 4 |
+| Latência percebida do lock (`acquire` antes de editar) não atrapalha abrir o CardSheet e arrastar | Medir o round-trip do `lock.acquire` em 4G simulado; a UI abre otimista e só bloqueia se vier `denied` | Semana 8 |
+| `pagehide` dispara de forma confiável no Chrome Android ao matar a aba | Teste manual em aparelho real | Semana 9 |
+| Rolling e rollback com instâncias mistas (P7) | Integração com API N e N+1 lado a lado | Semana 11 (antes do 1º deploy com mudança de protocolo) |

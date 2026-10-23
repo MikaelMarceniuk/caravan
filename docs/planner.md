@@ -9,7 +9,7 @@
 
 ## 1. Pitch
 
-Um grupo monta o roteiro de uma viagem junto, em tempo real. A viagem é dividida em **stops** (cidades, numa timeline), cada stop tem seus **dias** (colunas) e cada **atividade** é um card. Todos veem quem está online, quem está editando o quê e as mudanças dos outros na hora, sem flicker. O app funciona offline (aeroporto, estrada, roaming) e sincroniza sozinho quando a conexão volta. Nenhum dado se perde, mesmo se o servidor cair.
+Um grupo monta o roteiro de uma viagem junto, em tempo real. A viagem é dividida em **stops** (cidades, numa timeline), cada stop tem seus **dias** (colunas) e cada **atividade** é um card. Todos veem quem está online, quem está editando o quê e as mudanças dos outros na hora, sem flicker. Só uma pessoa edita cada coisa por vez ("Ana is editing"), então ninguém sobrescreve ninguém. Sem conexão (aeroporto, estrada, roaming), o plano continua aberto para consulta. Nenhuma edição confirmada se perde, mesmo se o servidor cair.
 
 O produto é simples de propósito. A complexidade está no que ele demonstra tecnicamente.
 
@@ -21,10 +21,10 @@ O produto é simples de propósito. A complexidade está no que ele demonstra te
 |---|---|
 | Tempo real / WebSocket | Operações e presença ao vivo |
 | Consistência e concorrência | Servidor autoritativo, operações versionadas, rebase |
-| Resiliência | Log de operações, snapshots, reconexão, fila offline |
+| Resiliência | Log de operações, recibos de op, reconexão, cache offline só leitura |
 | Escala horizontal | 2+ instâncias da API com Redis pub/sub |
-| Redis | Presença efêmera (TTL) + pub/sub |
-| Mensageria | Pub/sub entre instâncias (opcional: fila para jobs como snapshots) |
+| Redis | Presença efêmera (TTL) + pub/sub; o que é promessa (locks de edição) fica no Postgres |
+| Mensageria | Pub/sub entre instâncias |
 | Integração externa | Busca de lugares (Photon/OSM) |
 | Testes | Unitários + property-based (convergência) + integração (múltiplos clientes WS) + chaos test |
 | Performance | Load test com k6 (conexões simultâneas, latência p95 do broadcast) |
@@ -46,8 +46,8 @@ O produto é simples de propósito. A complexidade está no que ele demonstra te
   - Mover cards entre dias (drag & drop)
 - **Agenda:** linha do tempo do dia, "agora" e "up next"
 - Presença: avatares, "fulano está editando" (card e campo), cursores ao vivo, drag ao vivo
-- Offline: o plano fica sempre disponível; as edições vão para a fila e sincronizam na volta; status Synced/Syncing/Offline
-- Conflitos: painel "What changed" (Use mine / Keep theirs / Restore), card excluído visível, feed de atividade
+- Offline **só leitura**: o plano fica sempre consultável (plano, Agenda, ⌘K); editar exige conexão; status Synced/Syncing/Offline + banner "viewing only"
+- Edição exclusiva: lock por entidade ("Ana is editing"), toasts com *Restore* quando uma edição é rejeitada, feed de atividade
 - Busca ⌘K na viagem (offline) + busca de lugares (online)
 - **Web responsiva completa** (celular e desktop), com drag por toque
 - Sem demo interativa: a vitrine é o GIF/vídeo
@@ -68,10 +68,10 @@ O produto é simples de propósito. A complexidade está no que ele demonstra te
 Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade técnica. Resumo:
 
 - **Monorepo** (Bun + Turborepo): `apps/api` (Elysia), `apps/web` (Next.js), `packages/core` (domínio + `decide()` compartilhado entre cliente e servidor), `packages/sync` (motor de sync do cliente), `packages/tokens`.
-- **Consistência:** servidor autoritativo, ops versionadas por viagem, lock `FOR UPDATE` na linha da viagem, LWW por campo. **Quem perde um conflito não perde o dado**: o valor fica guardado em `conflicts` até a pessoa decidir.
+- **Consistência:** servidor autoritativo, ops versionadas por viagem, lock `FOR UPDATE` na linha da viagem, recibo por op. **Lock de edição por entidade** (no Postgres, conferido na transação da op) impede duas pessoas de editarem a mesma coisa; não há conflitos para resolver.
 - **Tempo real:** WebSocket + Redis pub/sub entre 2 instâncias atrás do Caddy. O cliente detecta buracos de versão e pede `resync`.
 - **Presença:** só Redis (hash com TTL por campo + pub/sub para cursor e drag).
-- **Persistência:** Postgres (projeção + `ops_log` + snapshots); no cliente, IndexedDB + Service Worker (Serwist).
+- **Persistência:** Postgres (projeção + `ops_log` + `op_receipts`, retidos para sempre); no cliente, IndexedDB + Service Worker (Serwist).
 - **Stack:** Bun, Elysia, Drizzle, Zod, Better Auth, Resend, Next.js, dnd-kit, TanStack Query, Photon (lugares), fast-check, Playwright, k6, toxiproxy, Docker Compose, GitHub Actions, Caddy, Cloudflare, VPS ARM da Hetzner para tudo ([`deploy.md`](./deploy.md)).
 
 ---
@@ -87,13 +87,13 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 - [ ] REST: viagens, membros, convites (link e e-mail)
 - [ ] `packages/core`: tipos e schemas das ops
 - [ ] **Spike de risco:** página Next.js abrindo offline com Serwist
-- [ ] **Decidir:** comportamento de stops em período ocupado (`architecture.md` §19)
+- [ ] **Decidido:** sobreposição de stops é rígida (D14); falta só a UX de empurrar/preencher (`architecture.md` §19, até a semana 5)
 - [ ] **Design:** telas de celular (até o fim da semana 4)
 
 ### Semanas 3–4 — Core, protocolo e motor de sync
-- [ ] `core`: `decide()` + mutations para todas as ops, invariantes de stops, ordenação por horário
+- [ ] `core`: `requirements()` + `decide()` síncrono + mutations (efeitos) para todas as ops, invariantes de stops, ordenação por horário, upcasters
 - [ ] Servidor WebSocket: `hello`/`welcome`, `op`, `ack`, `reject`, `resync`, ticket de auth
-- [ ] Pipeline de ops (lock por viagem, idempotência, `ops_log`, `field_meta`)
+- [ ] Pipeline de ops (lock por viagem, prefetch, `op_receipts`, `ops_log` com efeitos, `field_meta`, ops de sistema de membros)
 - [ ] `packages/sync`: confirmado + pendentes, rebase, buffer de ordem, portas Transport/Storage/Clock
 - [ ] **Testes unitários** + **property-based** (N clientes, entrega aleatória → convergem)
 - [ ] **Integração**: N clientes WS concorrentes contra a API real
@@ -108,22 +108,23 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 
 ### Semana 8 — Presença + escala
 - [ ] Presença: avatares, "editando" (card e campo), cursores e drag ao vivo
+- [ ] Lock de edição por entidade (`lock.acquire/release`, tabela `edit_locks`, `tabId`, conferência na transação) + UI "Ana is editing"
 - [ ] Redis pub/sub + 2 instâncias da API atrás do Caddy
-- [ ] Teste: clientes em instâncias diferentes convergem
+- [ ] Teste: clientes em instâncias diferentes convergem e o lock é exclusivo entre instâncias
 
 ### Semana 9 — Resiliência
-- [ ] Persistência local (IndexedDB) + Service Worker
-- [ ] Reconexão com `lastVersion`, backoff, status Synced/Syncing/Offline + banner
-- [ ] Snapshots
+- [ ] Cache de leitura (IndexedDB) + Service Worker: abrir o plano offline em só leitura
+- [ ] Reconexão com `lastVersion`, backoff, status Synced/Syncing/Offline + banner "viewing only"
+- [ ] Teste de compat de protocolo (API N e N+1 lado a lado, fixtures N−1)
 - [ ] **Chaos test** (toxiproxy): derrubar instância, Redis e rede no meio de edições → nada se perde
 
-### Semana 10 — Conflitos
-- [ ] Detecção no servidor (`field_overwritten`, `edit_on_deleted`, `deleted_after_edit`) + tabela `conflicts`
-- [ ] Painel "What changed" (Needs you / All activity), conflito inline no CardSheet, card excluído + restore, toast "Your change was undone"
+### Semana 10 — Folga + polimento
+- [ ] Toasts de rejeição (`deleted`, `locked`, `stop_overlap`) com *Restore with my change*; feed "All activity"
+- [ ] Folga do cronograma (o painel de conflitos saiu do escopo)
 
 ### Semana 11 — Lançamento
 - [ ] Deploy de produção na VPS (cloud-init/OpenTofu, pipeline rolling, backups no R2, Grafana Cloud)
-- [ ] Load test com k6 → registrar números no README e na landing
+- [ ] Load test com k6 (inclui o fan-out de cursores e a renovação de locks) → registrar números no README e na landing
 - [ ] README: arquitetura, diagrama, decisões e trade-offs, como rodar local
 - [ ] GIF/vídeo: 3 navegadores editando juntos + chaos demo
 - [ ] Post no LinkedIn + projeto em destaque no perfil
@@ -132,17 +133,17 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 
 ## 9. Vitrine (o que mostrar)
 
-- **GIF principal:** dois navegadores + um celular lado a lado, cursores e cards se movendo; um deles offline e voltando.
-- **Chaos demo:** matar uma instância da API ao vivo, sem perda de dados.
-- **Conflito demo:** dois editam o mesmo horário → "What changed" → "Use mine".
+- **GIF principal:** dois navegadores + um celular lado a lado, cursores e cards se movendo; um deles perde a conexão e continua vendo o plano.
+- **Chaos demo:** matar uma instância da API ao vivo, sem perda de dados; derrubar o Redis e mostrar que o lock de edição continua valendo.
+- **Edição exclusiva demo:** Ana abre um card, Leo vê "Ana is editing"; Ana fecha e Leo edita.
 - **Números:** "X conexões simultâneas, p95 de broadcast em Y ms" (k6).
 - **README com "Decisões de design":**
   - Servidor autoritativo vs CRDT
   - `core` compartilhado (functional core, imperative shell)
-  - Conflitos sem perda: LWW + versões guardadas para quem perdeu
+  - Lock de edição em vez de resolução de conflitos (e por que offline é só leitura)
   - Ordem do broadcast entre instâncias e detecção de buracos
-  - Presença em Redis vs banco
-  - Log de operações + snapshots
+  - Presença em Redis vs lock de edição no banco (efêmero × promessa)
+  - Log de operações retido inteiro: por que não compactar (ainda)
 - **Post no LinkedIn:** o problema, a decisão principal, o demo e o link.
 - Links: repositório público, web ao vivo.
 
@@ -153,8 +154,7 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 | Risco | Mitigação / corte |
 |---|---|
 | Sync engine demorar mais | É prioridade; se atrasar, cortar ⌘K, drag ao vivo e Google OAuth no primeiro deploy |
-| Next.js offline (Service Worker) | Spike na semana 2; plano B: rotas do app como SPA estática servida pelo SW |
-| Conflitos (semana 9) apertarem | Manter detecção e tabela; a UI mínima é só o toast + "Restore" |
+| Next.js offline (Service Worker) | Spike na semana 2; plano B: rotas do app como SPA estática servida pelo SW; plano C: sem offline no MVP (só o banner) |
 | Overview (timeline) trabalhosa | Primeiro uma lista simples de stops; a timeline por mês vem depois |
 | Responsivo completo atrasar | Drag por toque vira "mover para dia X" por menu no celular; o resto fica |
 | Faltar design de celular | Derivar dos componentes desktop; revisar depois |
