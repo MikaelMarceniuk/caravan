@@ -90,8 +90,8 @@ These apply to every milestone: responsiveness and accessibility are part of eve
 - [x] Monorepo (Bun + Turborepo), Biome, basic CI
 - [ ] Buy the domain (Cloudflare Registrar)
 - [x] Docker Compose (Postgres, Redis)
-- [ ] Database schema + migrations (Drizzle)
-- [ ] Auth with Better Auth: email and password (no email sending)
+- [ ] API (Elysia) + Drizzle
+- [ ] Auth with Better Auth: email and password (no email sending) + first migration and migration tests
 - [ ] REST: create and list trips
 - [ ] **Minimal production deploy:** CAX11, Caddy, Cloudflare, CI deploying (1 API instance)
 - [ ] **Risk spike:** a Next.js page opening offline with Serwist
