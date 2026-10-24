@@ -59,6 +59,8 @@ export function createAuth({ db, secret, baseURL, mailer }: AuthOptions) {
 		},
 		emailVerification: {
 			sendOnSignUp: true,
+			// A traveler who lost the link gets a new one by signing in.
+			sendOnSignIn: true,
 			autoSignInAfterVerification: true,
 			sendVerificationEmail: async ({ user, url }) =>
 				send('verification', {
