@@ -13,8 +13,6 @@
 |---|---|---|---|
 | **A. Antes do primeiro código** ||||
 | 2 | Datas da viagem × datas dos stops | Schema de `trips`, NewTrip | 🔴 |
-| 6 | Membros e convites: REST antes do pipeline de ops | REST de membros/convites | 🟠 |
-| 22 | Criptografia do Bun: escopo | Setup do auth e do WS | 🟡 |
 | **B. Modelo de domínio** ||||
 | 8 | Mapa: como fazer a rota | Mapa (v2) | 🟢 |
 | 9 | Fuso horário do stop | Agenda (v1.x) | 🟢 |
@@ -41,6 +39,8 @@
 
 ### 2. Datas da viagem × datas dos stops 🔴
 
+**Adiado (2026-10-24):** decidir quando o schema de `trips` e o NewTrip forem construídos no M1.
+
 **Por que importa:** encurtar a viagem e deixar stops de fora é aceito (vira aviso), mas criar um stop fora da viagem é rejeitado. Além disso, o `planner.md` diz "datas → gera os dias", só que agora os dias pertencem aos stops (D12): uma viagem sem stops não tem Board. Define as colunas de `trips` e o fluxo do NewTrip.
 
 **Opções:**
@@ -48,28 +48,6 @@
 - **B) Manter as datas próprias da viagem** e aceitar a assimetria (cada op valida só o que muda).
 
 **Recomendação para começar:** A, se o fluxo do NewTrip e o EmptyTrip aguentarem a mudança. Some uma regra e um tipo de aviso.
-
-### 6. Membros e convites: REST antes do pipeline de ops 🟠
-
-**Por que importa:** a fundação prevê "REST: viagens, membros, convites", mas, pela D18, entrar, sair e trocar de papel são **ops de sistema** que passam pelo pipeline, que só existe depois.
-
-**Opções:**
-- **A)** A fundação faz só criar/listar viagens e criar convites; aceitar convite (`member.join`) e gerenciar membros entram junto com o pipeline.
-- **B)** Escrever direto nas tabelas agora e reescrever depois.
-- **C)** Adiantar um pipeline mínimo.
-
-**Recomendação para começar:** A. Nada é escrito duas vezes.
-
-### 22. Criptografia do Bun: escopo 🟡
-
-**Por que importa:** a ideia é usar a criptografia do Bun. Falta dizer onde.
-
-**Candidatos:**
-- Hash de senha com `Bun.password` (argon2id) no lugar do padrão do Better Auth.
-- Assinatura do ticket do WS (HMAC com `Bun.CryptoHasher`).
-- Token de convite (10 caracteres base32 aleatórios).
-
-**A conferir:** se o Better Auth aceita trocar o hash de senha na versão que usarmos.
 
 ---
 
@@ -220,7 +198,6 @@ Mecânicas; dá para fazer num commit só.
 - [ ] Domínio: escolher o nome (hoje `caravan.x` é placeholder) e comprar no Cloudflare Registrar. Vem antes do Resend.
 - [ ] Resend: só envia para qualquer e-mail depois de verificar o domínio. No local, o mailpit cobre.
 - [ ] Cliente OAuth do Google e Sign in with Apple (quando entrarem; a Apple exige a conta de desenvolvedor paga).
-- [ ] Repositório público ou privado: o `deploy.md` conta com o runner ARM e o Actions grátis de repo público.
 - [ ] `LICENSE`.
 - [ ] Convenções: formato de commit, estratégia de branch e template de PR (com o checklist do item 20), num `AGENTS.md`/`CLAUDE.md` curto.
 

@@ -40,6 +40,8 @@
 | D29 | **Validação com Zod 4 em tudo**: os schemas moram no `core` e valem para as ops e mensagens do WS, para as rotas REST do Elysia (via Standard Schema, com o Eden inferindo os tipos) e para os clientes. Sem o `t` (TypeBox) do Elysia | Uma biblioteca só, legível para quem lê o repo. O Zod não gera código com `new Function`, então roda igual no Bun, no navegador com CSP rígida e no React Native. A vantagem de velocidade do TypeBox são microssegundos antes do lock, contra milissegundos da transação. Se o microbenchmark do M2 mostrar custo nos cursores, só essa mensagem ganha uma checagem à mão. A conferir no setup da API (M1): o Eden infere os tipos e o OpenAPI sai certo com Zod; se não, o REST volta para o `t` |
 | D30 | **Driver `Bun.sql`** no Drizzle, **pool de 10 conexões por instância** da API; a op espera **até 2 s** por uma conexão livre e depois recebe `busy` (transitória); **timeout de 5 s** por transação no Postgres. Depende do spike do M1; plano B: `postgres.js` | Só a API (Bun) acessa o banco, então o driver nativo não tem problema de compatibilidade e não soma dependência. Com ~1–2 ms por op, 10 conexões passam de milhares de ops/s; 2 × 10 + migrations + backup + reserva do Postgres ≈ 26 de `max_connections=50`, e pool maior só gasta memória e disputa as 2 vCPUs. O timeout impede que uma transação travada segure o lock da viagem. A API do `Bun.sql` segue a do `postgres.js` e o Drizzle esconde o driver, então trocar é barato |
 | D31 | **Stack da web**: Next.js 16 (Active LTS, versão exata fixada); Tailwind 4 + shadcn/ui sobre **Radix**; `packages/tokens` em TS gera o CSS do tema; testes de componente com **`bun test` + Testing Library + happy-dom**; Node 24 (`mise.toml` local, `node:24-slim` na prod) | O Next 16 é a versão com suporte ativo (o 15 sai da manutenção em out/2026). O shadcn copia os componentes para o repo e o Radix dá a acessibilidade (teclado, foco, leitor de tela). Os `tokens` em TS são uma fonte só para a web e o RN, e o teste de contraste AA roda neles. Um executor de testes no repo inteiro, com o mesmo comando local e no GitHub Actions; o que precisa de navegador real fica no Playwright. O Node 22 sai da manutenção em abr/2027 |
+| D32 | **Criptografia do Bun**: senha com **argon2id** do `Bun.password` (19 MiB, 2 iterações) plugado no Better Auth (`emailAndPassword.password.hash/verify`); ticket do WS assinado com **HMAC-SHA256** (`Bun.CryptoHasher`, segredo no `.env`, comparação em tempo constante); token de convite gerado com `crypto.getRandomValues` e guardado puro | argon2id é a primeira recomendação do OWASP, e trocar antes do primeiro usuário evita refazer hashes. O padrão do Bun (64 MiB por hash) derrubaria o container de 256 MB com 4 logins simultâneos; 19 MiB/2 é o mínimo do OWASP. O ticket assinado é conferido por qualquer instância sem consultar nada, então o WS aceita conexões com o Redis fora (como na D24); reusar o ticket dentro dos 60 s é aceitável com HTTPS. O token de convite fica puro porque o Invite mostra o link o tempo todo ("Copy link") |
+| D33 | **Membros e convites só junto com o pipeline (M4)**: a fundação (M1) faz só criar e listar viagens; aceitar convite, sair e trocar papel nascem como ops de sistema (D18). Até lá, testes com vários usuários e o seed de desenvolvimento criam os membros direto no banco | Nada é escrito duas vezes, e membros nunca existem fora da ordem das versões. O M2 ("duas abas editando stops juntas") funciona com um usuário só |
 
 ---
 
@@ -190,7 +192,7 @@ O mesmo código decide nos dois lados ("functional core, imperative shell"). É 
 | C↔S | `ping` / `pong` | `pong` traz `currentVersion`; o `ping` renova os locks da conexão |
 
 - **Versão do protocolo:** o servidor aceita a atual e a anterior; mais velho → `upgrade_required`, mais novo → `server_behind` (o cliente fica em só leitura e tenta de novo). Tipos novos de op/efeito são lidos um release antes de serem emitidos (`deploy.md` P7).
-- **Autenticação do WS:** o cliente pega um *ticket* curto (60 s, assinado) em `POST /ws-ticket` usando a sessão (cookie na web, bearer no mobile) e manda no `hello`. Assim o token não vai na query string.
+- **Autenticação do WS:** o cliente pega um *ticket* curto (`userId` + expiração de 60 s, assinado com HMAC-SHA256, D32) em `POST /ws-ticket` usando a sessão (cookie na web, bearer no mobile) e manda no `hello`. Assim o token não vai na query string.
 - O servidor processa as mensagens de cada conexão **em série**, o que preserva a ordem das ops de um mesmo cliente.
 
 ---
@@ -453,7 +455,8 @@ Checklist para não fechar portas agora:
 | Presença | 30/s |
 | Auth | rate limit do Better Auth |
 
-- Token de convite: 10 caracteres base32 (≈ 50 bits), com rate limit em `/join`.
+- Token de convite: 10 caracteres base32 (≈ 50 bits) de `crypto.getRandomValues`, com rate limit em `/join` (D32).
+- Senha: argon2id do `Bun.password` com 19 MiB e 2 iterações (D32), mais o rate limit do Better Auth.
 
 **Segurança e privacidade**
 - Upgrade do WS valida o `Origin` (Cross-Site WebSocket Hijacking) além do ticket.
