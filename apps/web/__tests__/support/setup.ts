@@ -9,12 +9,15 @@ Object.assign(globalThis, { Request, Response, Headers, fetch })
 const { afterEach, mock } = await import('bun:test')
 const { cleanup } = await import('@testing-library/react')
 const { navigation } = await import('./navigation')
+const { toast } = await import('sonner')
 
 // Next's router only exists inside the App Router: tests get a stand-in that records where a page sends the traveler.
 mock.module('next/navigation', () => navigation)
 
 afterEach(() => {
 	cleanup()
+	// Sonner keeps toasts in module state and replays the active ones to the next test's Toaster.
+	toast.dismiss()
 	navigation.reset()
 	// biome-ignore lint/suspicious/noDocumentCookie: tests clear the language cookie the sign-in form writes.
 	document.cookie = 'NEXT_LOCALE=; max-age=0; path=/'

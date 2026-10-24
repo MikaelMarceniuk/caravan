@@ -22,10 +22,11 @@
 		"emailInvalid": "Enter a valid email.",
 		"passwordTooShort": "Use at least {minimum} characters.",
 		"passwordTooLong": "Use at most {maximum} characters.",
-		"wrongCredentials": "Wrong email or password.",
 		"emailNotVerified": "Confirm your email first: we sent you a new link.",
 		"tooManyRequests": "Too many attempts. Wait a moment and try again.",
-		"unexpected": "Something went wrong. Try again."
+		"unexpected": "Something went wrong. Try again.",
+		"passwordRequired": "Enter your password.",
+		"wrongCredentials": "Wrong email or password."
 	},
 	"signIn": {
 		"title": "Welcome back",

@@ -22,10 +22,11 @@
 		"emailInvalid": "Informe um email válido.",
 		"passwordTooShort": "Use pelo menos {minimum} caracteres.",
 		"passwordTooLong": "Use no máximo {maximum} caracteres.",
-		"wrongCredentials": "Email ou senha incorretos.",
 		"emailNotVerified": "Confirme o seu email primeiro: enviamos um novo link.",
 		"tooManyRequests": "Muitas tentativas. Espere um pouco e tente de novo.",
-		"unexpected": "Algo deu errado. Tente de novo."
+		"unexpected": "Algo deu errado. Tente de novo.",
+		"passwordRequired": "Informe a sua senha.",
+		"wrongCredentials": "Email ou senha incorretos."
 	},
 	"signIn": {
 		"title": "Bem-vindo de volta",
