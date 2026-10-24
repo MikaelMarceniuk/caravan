@@ -38,7 +38,7 @@ O produto é simples de propósito. A complexidade está no que ele demonstra te
 ### Dentro
 - Auth: e-mail/senha, esqueci a senha e "Try the demo" (sessão anônima) com Better Auth. Google e Apple ficam para depois
 - Lista de viagens (próximas/passadas, quem está online, convites pendentes)
-- Criar viagem (nome, datas → gera os dias; primeiro stop e convites opcionais)
+- Criar viagem (nome e datas; primeiro stop e convites opcionais). Os dias vêm dos stops (D12); se a viagem tem datas próprias é o item 2 do [`open-topics.md`](./open-topics.md)
 - Convites: link (papel, expira em 7 dias, reset) e por e-mail (reenviar, aceitar/recusar); papéis owner e editor
 - **Overview:** lista de stops, adicionar/editar/remover stop (cidade, datas, transporte, cor), aviso de gaps
 - **Board** por stop: dias como colunas (título editável), cards ordenados por horário
@@ -73,7 +73,7 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 - **Consistência:** servidor autoritativo, ops versionadas por viagem, lock `FOR UPDATE` na linha da viagem, recibo por op. **Lock de edição por entidade** (no Postgres, conferido na transação da op) impede duas pessoas de editarem a mesma coisa; não há conflitos para resolver.
 - **Tempo real:** WebSocket + Redis pub/sub entre 2 instâncias atrás do Caddy. O cliente detecta buracos de versão e pede `resync`.
 - **Presença:** só Redis (hash com TTL por campo + pub/sub para cursor e drag).
-- **Persistência:** Postgres (projeção + `ops_log` + `op_receipts`, retidos para sempre); no cliente, IndexedDB + Service Worker (Serwist).
+- **Persistência:** Postgres (projeção + `ops_log` retido inteiro + `op_receipts` por 7 dias, D19); no cliente, IndexedDB + Service Worker (Serwist).
 - **Stack:** Bun, Elysia, Drizzle, Zod, Better Auth, Resend, Next.js 16, Tailwind 4, shadcn/ui (Radix), dnd-kit, TanStack Query, Photon (lugares), fast-check, Playwright, k6, toxiproxy, Docker Compose, GitHub Actions, Caddy, Cloudflare, VPS ARM da Hetzner para tudo ([`deploy.md`](./deploy.md)).
 
 ---
