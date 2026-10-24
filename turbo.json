@@ -9,7 +9,9 @@
 				"package.json",
 				"tsconfig*.json",
 				"biome.json",
-				"drizzle.config.ts"
+				"drizzle.config.ts",
+				"scripts/**",
+				"theme.css"
 			],
 			"outputs": []
 		},
@@ -20,7 +22,9 @@
 				"__tests__/**",
 				"package.json",
 				"tsconfig*.json",
-				"drizzle.config.ts"
+				"drizzle.config.ts",
+				"scripts/**",
+				"theme.css"
 			],
 			"outputs": []
 		},
@@ -36,7 +40,9 @@
 				"__tests__/**",
 				"package.json",
 				"tsconfig*.json",
-				"drizzle.config.ts"
+				"drizzle.config.ts",
+				"scripts/**",
+				"theme.css"
 			],
 			"env": ["DATABASE_URL"],
 			"outputs": []
