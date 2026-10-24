@@ -95,6 +95,7 @@ Valem para todos os marcos: responsividade e acessibilidade fazem parte de cada 
 - [ ] REST: criar e listar viagens
 - [ ] **Deploy mínimo na prod:** CAX11, Caddy, Cloudflare, CI fazendo deploy (1 instância da API)
 - [ ] **Spike de risco:** página Next.js abrindo offline com Serwist
+- [ ] **Spike de risco:** `Bun.sql` no pipeline (`FOR UPDATE` em série, pool cheio → `busy`, timeout de transação, migrations e Better Auth); plano B: `postgres.js` (`architecture.md` D30)
 
 **No fim:** login e lista de viagens no ar.
 
@@ -195,6 +196,7 @@ Valem para todos os marcos: responsividade e acessibilidade fazem parte de cada 
 |---|---|
 | Sync engine demorar mais | É prioridade; ⌘K, drag ao vivo e login social já estão na v1.x. Se atrasar mais, outras features mudam de versão (§8) |
 | Next.js offline (Service Worker) | Spike no M1; plano B: rotas do app como SPA estática servida pelo SW; plano C: sem offline no MVP (só o banner) |
+| `Bun.sql` instável no pipeline | Spike no M1; plano B: `postgres.js` (mesma API, o Drizzle esconde o driver) |
 | Overview (timeline) trabalhosa | Primeiro uma lista simples de stops; a timeline por mês vem depois |
 | Responsivo completo atrasar | O drag por toque pode esperar: o "Mover para…" (exigido pela WCAG) já cobre o celular |
 | Faltar design de celular | Derivar dos componentes desktop; revisar depois |
