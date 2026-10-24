@@ -33,3 +33,6 @@ Tool versions come from `mise.toml` (`mise install`). Bun's version is also in t
 - `bun run format`: apply Biome's formatting and safe fixes to the whole repo.
 - `bunx turbo run test --filter=@caravan/core`: one workspace only.
 - Tests live in each workspace's `__tests__/` and are named `*.test.ts`; `bun test` runs them.
+- `bun run infra:up`: start Postgres (`127.0.0.1:5433`) and Redis (`127.0.0.1:6380`) with Docker Compose and wait until they are healthy. Credentials `caravan`/`caravan`, database `caravan`. Ports and credentials can be overridden in `infra/.env` (see `infra/.env.example`).
+- `bun run infra:check`: check that the running Postgres and Redis match `docs/project/deploy.md` §3. CI runs it too.
+- `bun run infra:down`: stop them, keeping the Postgres data. `bun run infra:reset`: stop them and delete the data.
