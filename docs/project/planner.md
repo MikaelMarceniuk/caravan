@@ -87,7 +87,7 @@ These apply to every milestone: responsiveness and accessibility are part of eve
 ### v1 — showcase
 
 #### M1 — Foundation
-- [ ] Monorepo (Bun + Turborepo), Biome, basic CI
+- [x] Monorepo (Bun + Turborepo), Biome, basic CI
 - [ ] Buy the domain (Cloudflare Registrar)
 - [ ] Docker Compose (Postgres, Redis)
 - [ ] Database schema + migrations (Drizzle)

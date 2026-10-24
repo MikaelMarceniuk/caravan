@@ -44,6 +44,8 @@
 | D33 | **Members and invites only come with the pipeline (M4)**: the foundation (M1) only creates and lists trips; accepting an invite, leaving and changing roles are born as system ops (D18). Until then, multi-user tests and the development seed create members directly in the database | Nothing is written twice, and members never exist outside the version order. M2 ("two tabs editing stops together") works with a single user |
 | D34 | **Interface in pt-BR and en-US** from the first screen, with `next-intl` on the web. The server never sends display text, only codes (`reject { reason: "stop_overlap" }`), and each client translates. Emails (invite, password reset) go out in the recipient's language (D35) | Translating later would mean hunting for strings across every screen. With codes in the protocol, web and Android translate in their own way, and the API doesn't need to know each connection's language |
 | D35 | **Language in a cookie, not in the URL**: no route has a locale prefix. The proxy resolves the language in this order: `NEXT_LOCALE` cookie → `Accept-Language` (`pt`, `pt-BR` and `pt-PT` become pt-BR; anything else, en-US) → en-US. **`user.locale`** (a Better Auth additional field) is the source of truth: sign-up saves the language in use, sign-in overwrites the cookie with it, and the switcher (landing footer and user menu) updates both. Password reset uses `user.locale`; an email invite to someone without an account goes out in the inviter's `locale`, and `/join` detects the recipient's own. Android follows the device language unless the user chose one | App and invite links leave the app (email, WhatsApp): with a prefix they would carry the sender's language and could never change. The Service Worker precaches a single version of the app routes. SEO per language matters little for a portfolio aimed at remote jobs, and the en-US landing is the one Google indexes; if the landing ever needs pt-BR SEO, it can get a prefix without touching any app link. The precached HTML holds the text of the language at precache time, so switching languages asks the SW to precache the app routes again |
+| D36 | **Workspace packages are consumed as source**: `packages/*` have no build step and export `src/index.ts`; the apps compile them (Next with `transpilePackages`, Bun runs TypeScript, Metro on Expo). In CI, a package's "build" is its typecheck | No `dist`, exports map, sourcemaps or build order to maintain. Compiling the packages would only pay off if they were published, which is not planned |
+| D37 | **One Biome config with per-workspace additions**: the root `biome.json` holds the shared rules and formatting (tabs of width 2, single quotes, no semicolons); each workspace has its own `biome.json` with `"root": false` and `"extends": "//"`, adding only its rules. Markdown is not formatted by Biome | Biome 2's native monorepo support: no config package to maintain. Each workspace lints through Turborepo, so lint is cached and runs only in affected areas. Reformatting the docs' tables and code blocks would only add noise |
 
 ---
 
@@ -77,7 +79,7 @@
 
 ## 2. Monorepo
 
-Bun workspaces + Turborepo. Biome for lint/format.
+Bun workspaces + Turborepo. Biome for lint/format (D37). Packages are consumed as source (D36).
 
 ```
 apps/
@@ -94,6 +96,8 @@ infra/
 ```
 
 **Dependency rule:** `core` depends on nothing; `sync` depends only on `core`; the apps depend on both. No package may use DOM, Node, Bun or React Native APIs.
+
+In `core`, the rule is enforced by tooling: its `tsconfig.json` declares `lib: ["ES2023"]` and `types: []`, so DOM, Bun and Node globals don't exist there, and its `biome.json` rejects imports of `bun`, `bun:*`, Node modules and `@caravan/*` in `src/`. The tests have their own `__tests__/tsconfig.json` with Bun's types.
 
 ---
 
