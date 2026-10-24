@@ -97,6 +97,8 @@ These apply to every milestone: responsiveness and accessibility are part of eve
 - [ ] **Risk spike:** a Next.js page opening offline with Serwist
 - [ ] **Risk spike:** `Bun.sql` in the pipeline (`FOR UPDATE` in series, full pool → `busy`, transaction timeout, migrations and Better Auth); plan B: `postgres.js` (`architecture.md` D30)
 
+**Order:** the monorepo setup leaves `bun test` working and CI running before any production code merges. Docker Compose (Postgres, Redis) is up before the code whose tests need it. Other test tools come in with the first code that needs them, not ahead of time.
+
 **Done when:** sign-in and the trip list are live.
 
 #### M2 — Sync slice (stops)

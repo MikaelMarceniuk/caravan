@@ -1,19 +1,25 @@
 # When to Mock
 
-Mock at **system boundaries** only:
+Mock at **system boundaries** only, when replacing the real dependency helps isolate the behavior under test.
 
-- External APIs (payment, email, etc.)
-- Databases (sometimes - prefer test DB)
-- Time/randomness
-- File system (sometimes)
+Common cases:
+
+- **External APIs and services** (payment, email, geocoding, etc.): use mocks or fakes when the external service is not the subject of the test.
+- **Time and randomness:** inject a clock or random-number source so behavior is deterministic.
+- **File system:** use a fake or mock when testing logic that does not depend on actual filesystem semantics. Use real temporary files when filesystem behavior is part of the contract.
+- **Databases:** follow the project's database-testing policy. For Caravan, do not mock the database in integration tests. Integration tests that validate database behavior must use real test instances of Postgres and Redis. A unit test may replace a repository interface with a mock or fake when testing the unit's logic, if that interface already exists as a legitimate part of the architecture, but that does not replace database integration tests.
 
 Don't mock:
 
-- Your own classes/modules
-- Internal collaborators
-- Anything you control
+- Your own classes or modules when doing so couples tests to implementation details.
+- Internal collaborators merely to make tests easier to write.
+- A dependency whose actual behavior is part of the contract being tested.
+
+**Project policy takes precedence:** when these general guidelines conflict with `docs/project/development.md`, follow the project document.
 
 ## Designing for Mockability
+
+Don't design interfaces only for mocks. Create an interface, repository layer or port only for a real boundary (an external service or a port the project's architecture defines), never just to make a test easier to write.
 
 At system boundaries, design interfaces that are easy to mock:
 
