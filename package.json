@@ -2,7 +2,17 @@
 	"name": "caravan",
 	"private": true,
 	"packageManager": "bun@1.4.3",
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"check": "turbo run lint typecheck build test",
+		"lint": "turbo run lint",
+		"typecheck": "turbo run typecheck",
+		"build": "turbo run build",
+		"test": "turbo run test"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.3",
 		"@types/bun": "1.4.3",
