@@ -100,7 +100,7 @@ Só o Caddy está na rede `edge`. Postgres e Redis ficam na rede interna, **sem 
 ## 5. Pipeline de deploy (zero downtime)
 
 ```
-push na main
+push na master
  ├─ CI: typecheck · Biome · unit/propriedade · integração (compose) · Playwright
  ├─ build em paralelo no runner ubuntu-24.04-arm → push GHCR (tag = sha)
  │    caravan-api   caravan-web
@@ -117,7 +117,7 @@ push na main
      6. falhou? deploy.sh <sha anterior> (as imagens antigas ficam no host)
 ```
 
-**A `main` vai direto para a prod.** A homologação (seção 14) é para testar uma branch antes do merge, não um degrau obrigatório.
+**A `master` vai direto para a prod** (só recebe merge de PR, nunca commit direto). A homologação (seção 14) é para testar uma branch antes do merge, não um degrau obrigatório.
 
 **Cada deploy exercita a reconexão de verdade.** É um chaos test que roda sozinho.
 
@@ -209,8 +209,8 @@ infra/
   provision/             cloud-init.yaml · tofu/
   k6/                    cenários de carga
 .github/workflows/
-  ci.yml                 PR e main
-  deploy.yml             main → build ARM → GHCR → deploy.sh
+  ci.yml                 PR e master
+  deploy.yml             master → build ARM → GHCR → deploy.sh
   homol.yml              branch → build ARM → GHCR → cria a homol → deploy.sh
 ```
 

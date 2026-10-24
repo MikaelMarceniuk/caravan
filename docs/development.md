@@ -30,7 +30,7 @@
 - **Cor:** contraste AA validado nos `tokens`, inclusive texto sobre as cores dos stops. Cor nunca é a única informação (o membro tem cor **e** iniciais ou nome).
 - **Movimento:** animações respeitam `prefers-reduced-motion`.
 - **Zoom:** a interface funciona com zoom de 200%.
-- **Idioma:** `lang="en"` (a interface é em inglês).
+- **Idioma:** o `lang` do `<html>` segue o idioma escolhido (`pt-BR` ou `en-US`, D34).
 
 ### Checklist de "tela pronta"
 
@@ -66,7 +66,7 @@
 - **Testa comportamento por uma interface pública** (*seam*), nunca detalhes internos. Se o teste quebra num refactor que não mudou o comportamento, o teste estava errado.
 - **Seams combinados antes:** antes de escrever testes de uma área, decidimos em quais interfaces públicas eles vão ficar.
 - **Valor esperado vem de fonte independente** (um literal conhecido, um exemplo do design, a regra do domínio), nunca recalculado do jeito que o código calcula.
-- **Nome descreve o comportamento** na linguagem do domínio ([`CONTEXT.md`](../CONTEXT.md)): "rejeita stop que sobrepõe outro", não "testa validateStop".
+- **Nome descreve o comportamento** na linguagem do domínio ([`CONTEXT.md`](../CONTEXT.md)): "rejects a stop that overlaps another", não "tests validateStop". Nomes de teste em inglês, como o código.
 
 ### Seams do projeto (proposta)
 
@@ -80,6 +80,10 @@
 
 Os níveis (unit, propriedade, integração, chaos, E2E, carga) e as ferramentas estão em [`architecture.md`](./architecture.md) §14.
 
+### Onde ficam os testes
+
+- Um diretório `__tests__/` por pacote ou app, espelhando o `src/`: `packages/core/src/stops/stop.ts` → `packages/core/__tests__/stops/stop.test.ts`.
+
 ### Mocks
 
 - **Só nas bordas do sistema:** rede externa (Photon, Resend), relógio, aleatoriedade.
@@ -92,6 +96,42 @@ Os níveis (unit, propriedade, integração, chaos, E2E, carga) e as ferramentas
 
 ### Em aberto
 
-- Onde ficam os testes: ao lado do código (`*.test.ts`) ou em `tests/`?
-- Nome dos testes em inglês (como o código) ou português?
-- Cobertura mínima na CI, ou só "todos os testes passam"?
+- Cobertura mínima na CI, ou só "todos os testes passam"? Decidir ao configurar os testes. O TDD é obrigatório de qualquer forma.
+
+---
+
+## 3. Convenções do repositório
+
+### Commits
+
+- **Conventional Commits, numa linha só, sem corpo:** `tipo(escopo): descrição`, em inglês. O porquê vai na descrição do PR.
+- **Tipos:** `feat`, `fix`, `test`, `refactor`, `perf`, `docs`, `ci`, `chore`.
+- **Escopo:** a parte do monorepo tocada (`core`, `sync`, `api`, `web`, `tokens`, `deploy`). Pode ficar vazio quando o commit pega várias.
+
+### Branches e PRs
+
+- **Nada de commit direto na `master`.** Todo trabalho vai numa branch curta `tipo/descricao` (ex.: `feat/stop-overlap`) e entra por PR.
+- **O CI precisa passar** antes do merge, mesmo trabalhando sozinho.
+- **Squash merge:** cada PR vira um commit na `master`, com o título do PR como mensagem. Por isso o título do PR segue o formato dos commits.
+- O PR preenche o template (`.github/pull_request_template.md`).
+
+### Idioma
+
+| O quê | Idioma |
+|---|---|
+| Código, nomes de teste, commits, PRs | en-US |
+| Docs do projeto, de features e de bugfixes | en-US |
+| README (para recrutadores) | en-US (`README.md`) e pt-BR (`README.pt-BR.md`), com link entre os dois, atualizados no mesmo PR |
+| Interface | pt-BR e en-US (D34) |
+
+### Docs
+
+```
+docs/
+  project/     documentação do projeto: architecture, deploy, development, planner, open-topics
+  design/      telas do design
+  features/    um doc por feature, com o nome da branch (feat/stop-overlap → stop-overlap.md)
+  bugfix/      um doc por bugfix, com o nome da branch (fix/lock-renewal → lock-renewal.md)
+CONTEXT.md     glossário do domínio
+README.md      vitrine em en-US, com link para README.pt-BR.md
+```
