@@ -25,7 +25,6 @@
 | 15 | Push or only fill when adding a stop | Overview UI | 🟡 |
 | 16 | Where the "All activity" feed lives | Status UI | 🟡 |
 | 17 | *Viewer* role (read-only) | Nothing (v2) | 🟢 |
-| 23 | Interface language: in the URL or in a cookie | `next-intl` setup | 🟠 |
 | **D. Technical validation** ||||
 | 18 | Service Worker spike: success criteria | Read-only offline | 🔴 |
 | 19 | Out-of-order messages: timings and test plan | `packages/sync` | 🟠 |
@@ -140,17 +139,6 @@ Chosen without discussion (`architecture.md` §7). Confirm or change:
 
 It doesn't change the architecture (the role is already checked inside the transaction). It is a product question: does a family member only follow the itinerary? It is in v2 of the roadmap.
 
-### 23. Interface language: in the URL or in a cookie 🟠
-
-**Why it matters:** the interface has pt-BR and en-US (D34), and `next-intl` needs to know where the language lives before the first screen.
-
-**Options:**
-- **URL prefix** (`/pt-BR/trips`): good for the landing page's SEO, but shared links (invite, `/t/:id`) start carrying a language.
-- **Cookie / user preference** (no language in the URL): the same links for everyone and a simpler precache in the Service Worker, but the landing page has a single URL for both languages.
-- **Mixed:** prefix only on the public pages (landing) and a cookie in the app.
-
-**To discuss:** the default language (from `Accept-Language`, falling back to en-US) and where the preference is saved (on the user, so emails go out in the right language).
-
 ---
 
 ## D. Technical validation
@@ -163,6 +151,7 @@ It doesn't change the architecture (the role is already checked inside the trans
 - Open `/t/:id` with no network after one visit, with the plan coming from IndexedDB.
 - Update the app (new deploy) and have the old SW replaced within 1 reload.
 - Work on Chrome Android and Safari iOS (iOS is web-only, but it will show up in the video).
+- Switch the language (D35) and have the app routes served in the new language on the next offline open.
 
 **Plans B and C:** a static SPA served by the SW · no offline in v1 (banner only).
 
