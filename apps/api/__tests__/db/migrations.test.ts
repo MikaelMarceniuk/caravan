@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { generateDrizzleJson, generateMigration } from 'drizzle-kit/api'
 import { sql } from 'drizzle-orm'
 import { migrateDatabase } from '../../src/db/migrate'
+import { nonAdditiveStatements } from '../../src/db/migration-policy'
 import * as schema from '../../src/db/schema'
 import { useTestDatabase } from '../support/test-database'
 
@@ -16,6 +17,25 @@ async function latestSnapshot() {
 	const index = String(latest.idx).padStart(4, '0')
 	return Bun.file(`${MIGRATIONS_FOLDER}/meta/${index}_snapshot.json`).json()
 }
+
+describe('every migration outside a contract phase', () => {
+	test('is additive', async () => {
+		const files = await Array.fromAsync(
+			new Bun.Glob('*.sql').scan(MIGRATIONS_FOLDER),
+		)
+		const violations: Record<string, string[]> = {}
+		for (const file of files.sort()) {
+			// A contract phase is marked in the name: `db:generate --name contract_<reason>`.
+			if (file.includes('_contract_')) continue
+			const statements = nonAdditiveStatements(
+				await Bun.file(`${MIGRATIONS_FOLDER}/${file}`).text(),
+			)
+			if (statements.length > 0) violations[file] = statements
+		}
+
+		expect(violations).toEqual({})
+	})
+})
 
 describe('the Drizzle schema', () => {
 	test('matches the migrations', async () => {
