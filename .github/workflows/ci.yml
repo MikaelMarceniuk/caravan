@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  changes:
+    name: Root lint and affected areas
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    outputs:
+      packages: ${{ steps.areas.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: jdx/mise-action@v5
+      - run: bun install --frozen-lockfile
+      - name: Lint root files
+        run: bun run lint:root
+      - name: Find affected areas
+        id: areas
+        run: .github/scripts/affected-areas.sh
+
+  packages:
+    name: Packages
+    needs: changes
+    if: needs.changes.outputs.packages == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: bun install --frozen-lockfile
+      - name: Lint, typecheck, build and test
+        run: bunx turbo run lint typecheck build test --filter='./packages/*'
+
+  ci:
+    name: CI
+    if: always()
+    needs: [changes, packages]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    steps:
+      - name: Fail if any job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "Every affected area passed."
