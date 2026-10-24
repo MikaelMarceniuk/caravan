@@ -1,9 +1,15 @@
 {
 	"$schema": "https://turborepo.com/schema.json",
-	"globalDependencies": ["tsconfig.base.json"],
+	"globalDependencies": ["tsconfig.base.json", "biome.json"],
 	"tasks": {
 		"lint": {
-			"inputs": ["src/**", "__tests__/**", "package.json", "tsconfig*.json", "biome.json"],
+			"inputs": [
+				"src/**",
+				"__tests__/**",
+				"package.json",
+				"tsconfig*.json",
+				"biome.json"
+			],
 			"outputs": []
 		},
 		"typecheck": {
