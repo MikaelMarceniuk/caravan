@@ -7,8 +7,10 @@
 		"packages/*"
 	],
 	"scripts": {
-		"check": "turbo run lint typecheck build test",
-		"lint": "turbo run lint",
+		"check": "bun run lint:root && turbo run lint typecheck build test",
+		"lint": "bun run lint:root && turbo run lint",
+		"lint:root": "biome ci *.json",
+		"format": "biome check --write .",
 		"typecheck": "turbo run typecheck",
 		"build": "turbo run build",
 		"test": "turbo run test"

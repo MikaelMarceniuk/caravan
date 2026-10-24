@@ -1,0 +1,33 @@
+{
+	"$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+	"root": false,
+	"extends": "//",
+	"overrides": [
+		{
+			"includes": ["src/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noNodejsModules": "error"
+					},
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"bun": "core runs on the client and the server: no Bun APIs (AGENTS.md, Dependencies)."
+								},
+								"patterns": [
+									{
+										"group": ["bun:*", "@caravan/*"],
+										"message": "core imports nothing of ours and no runtime APIs (AGENTS.md, Dependencies)."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}
