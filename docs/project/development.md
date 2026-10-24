@@ -1,7 +1,7 @@
 # Caravan — Padrões de desenvolvimento
 
 > Como escrevemos código neste projeto: o que vale para toda tarefa, independente do marco.
-> As decisões de arquitetura estão em [`architecture.md`](./architecture.md); o vocabulário, em [`CONTEXT.md`](../CONTEXT.md).
+> As decisões de arquitetura estão em [`architecture.md`](./architecture.md); o vocabulário, em [`CONTEXT.md`](../../CONTEXT.md).
 > Rascunho: cada seção termina com o que ainda está em aberto.
 
 ---
@@ -66,7 +66,7 @@
 - **Testa comportamento por uma interface pública** (*seam*), nunca detalhes internos. Se o teste quebra num refactor que não mudou o comportamento, o teste estava errado.
 - **Seams combinados antes:** antes de escrever testes de uma área, decidimos em quais interfaces públicas eles vão ficar.
 - **Valor esperado vem de fonte independente** (um literal conhecido, um exemplo do design, a regra do domínio), nunca recalculado do jeito que o código calcula.
-- **Nome descreve o comportamento** na linguagem do domínio ([`CONTEXT.md`](../CONTEXT.md)): "rejects a stop that overlaps another", não "tests validateStop". Nomes de teste em inglês, como o código.
+- **Nome descreve o comportamento** na linguagem do domínio ([`CONTEXT.md`](../../CONTEXT.md)): "rejects a stop that overlaps another", não "tests validateStop". Nomes de teste em inglês, como o código.
 
 ### Seams do projeto (proposta)
 

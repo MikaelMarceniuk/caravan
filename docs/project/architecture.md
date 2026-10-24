@@ -1,7 +1,7 @@
 # Caravan — Arquitetura
 
-> Documento técnico de referência. O produto, o escopo e o roadmap estão em [`planner.md`](./planner.md); as telas, em [`design/`](./design).
-> Última revisão: 2026-10-24. Vocabulário do domínio: [`CONTEXT.md`](../CONTEXT.md).
+> Documento técnico de referência. O produto, o escopo e o roadmap estão em [`planner.md`](./planner.md); as telas, em [`design/`](../design).
+> Última revisão: 2026-10-24. Vocabulário do domínio: [`CONTEXT.md`](../../CONTEXT.md).
 
 ---
 
@@ -29,7 +29,7 @@
 | D18 | **Membros e exclusão da viagem são ops de sistema** no mesmo log versionado | Ordem total entre plano e permissões; membros visíveis offline; feed e broadcast de graça |
 | D19 | **Sem snapshots no MVP**; `ops_log` e tombstones retidos, recibos por 7 dias | O `welcome` com estado sai da projeção; pendentes só vivem em memória (segundos), então o recibo não precisa durar mais |
 | D20 | ~~A aba que cria a op grava no IndexedDB antes de avisar a líder~~ | **Substituída pela D23**: sem fila persistida, não há líder nem fila no IndexedDB |
-| D21 | **`Activity` no domínio e no protocolo**; "card" é só o componente visual (`ActivityCard`, `CardSheet`) | O nome do tipo de op é contrato (P7); a Agenda e o mobile não mostram cards. Glossário em [`CONTEXT.md`](../CONTEXT.md) |
+| D21 | **`Activity` no domínio e no protocolo**; "card" é só o componente visual (`ActivityCard`, `CardSheet`) | O nome do tipo de op é contrato (P7); a Agenda e o mobile não mostram cards. Glossário em [`CONTEXT.md`](../../CONTEXT.md) |
 | D22 | **Lock de edição por entidade**: só uma pessoa edita uma atividade, um stop, um título de dia ou o cabeçalho da viagem por vez | Elimina conflitos de escrita concorrente na origem; a UI mostra "Ana is editing" e bloqueia o resto |
 | D24 | **Locks de edição no Postgres** (`edit_locks`), conferidos **dentro da transação** da op; Redis só para o efêmero | O que é promessa do produto fica no banco, o que é efêmero fica no Redis. Sem janela de corrida, e o lock continua valendo com o Redis fora do ar |
 | D25 | **Ajustes de desempenho do caminho quente**: lock conferido na mesma ida ao banco do prefetch; renovação de locks em lote por instância; `edit_locks` `UNLOGGED` sem índice em `expires_at`; entrega local pelo pub/sub nativo do Bun | O lock no Postgres custa ~0,1 ms numa edição de 50–200 ms; o gargalo real é o fan-out dos cursores, atacado com o pub/sub nativo |

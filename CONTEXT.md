@@ -1,6 +1,6 @@
 # Caravan — Glossário
 
-Vocabulário do domínio. Código, protocolo, docs e UI usam estes termos. Decisões: [`docs/architecture.md`](docs/architecture.md) §0.
+Vocabulário do domínio. Código, protocolo, docs e UI usam estes termos. Decisões: [`docs/project/architecture.md`](docs/project/architecture.md) §0.
 
 ## Plano
 
