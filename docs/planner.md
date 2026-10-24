@@ -74,7 +74,7 @@ Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade t
 - **Tempo real:** WebSocket + Redis pub/sub entre 2 instâncias atrás do Caddy. O cliente detecta buracos de versão e pede `resync`.
 - **Presença:** só Redis (hash com TTL por campo + pub/sub para cursor e drag).
 - **Persistência:** Postgres (projeção + `ops_log` + `op_receipts`, retidos para sempre); no cliente, IndexedDB + Service Worker (Serwist).
-- **Stack:** Bun, Elysia, Drizzle, Zod, Better Auth, Resend, Next.js, dnd-kit, TanStack Query, Photon (lugares), fast-check, Playwright, k6, toxiproxy, Docker Compose, GitHub Actions, Caddy, Cloudflare, VPS ARM da Hetzner para tudo ([`deploy.md`](./deploy.md)).
+- **Stack:** Bun, Elysia, Drizzle, Zod, Better Auth, Resend, Next.js 16, Tailwind 4, shadcn/ui (Radix), dnd-kit, TanStack Query, Photon (lugares), fast-check, Playwright, k6, toxiproxy, Docker Compose, GitHub Actions, Caddy, Cloudflare, VPS ARM da Hetzner para tudo ([`deploy.md`](./deploy.md)).
 
 ---
 
