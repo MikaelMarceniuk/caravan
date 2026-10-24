@@ -22,7 +22,8 @@
 			"linter": {
 				"rules": {
 					"a11y": {
-						"useSemanticElements": "off"
+						"useSemanticElements": "off",
+						"useKeyWithClickEvents": "off"
 					},
 					"suspicious": {
 						"noDoubleEquals": "off",
