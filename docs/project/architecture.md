@@ -42,7 +42,8 @@
 | D31 | **Web stack**: Next.js 16 (Active LTS, exact version pinned); Tailwind 4 + shadcn/ui on **Radix**; `packages/tokens` in TS generates the theme CSS; component tests with **`bun test` + Testing Library + happy-dom**; Node 24 (`mise.toml` locally, `node:24-slim` in production) | Next 16 is the actively supported version (15 leaves maintenance in Oct/2026). shadcn copies the components into the repo, and Radix provides accessibility (keyboard, focus, screen reader). TS `tokens` are a single source for web and RN, and the AA contrast test runs on them. One test runner for the whole repo, with the same command locally and on GitHub Actions; whatever needs a real browser goes to Playwright. Node 22 leaves maintenance in Apr/2027 |
 | D32 | **Bun cryptography**: passwords with `Bun.password`'s **argon2id** (19 MiB, 2 iterations) plugged into Better Auth (`emailAndPassword.password.hash/verify`); WS ticket signed with **HMAC-SHA256** (`Bun.CryptoHasher`, secret in `.env`, constant-time comparison); invite token generated with `crypto.getRandomValues` and stored as is | argon2id is OWASP's first recommendation, and switching before the first user avoids rehashing. Bun's default (64 MiB per hash) would take down the 256 MB container with 4 simultaneous sign-ins; 19 MiB/2 is OWASP's minimum. Any instance can check the signed ticket without looking anything up, so the WS accepts connections with Redis down (as in D24); reusing a ticket within its 60 s is acceptable over HTTPS. The invite token is stored as is because the Invite screen shows the link all the time ("Copy link") |
 | D33 | **Members and invites only come with the pipeline (M4)**: the foundation (M1) only creates and lists trips; accepting an invite, leaving and changing roles are born as system ops (D18). Until then, multi-user tests and the development seed create members directly in the database | Nothing is written twice, and members never exist outside the version order. M2 ("two tabs editing stops together") works with a single user |
-| D34 | **Interface in pt-BR and en-US** from the first screen, with `next-intl` on the web. The server never sends display text, only codes (`reject { reason: "stop_overlap" }`), and each client translates. Emails (invite, password reset) go out in the recipient's language | Translating later would mean hunting for strings across every screen. With codes in the protocol, web and Android translate in their own way, and the API doesn't need to know each connection's language |
+| D34 | **Interface in pt-BR and en-US** from the first screen, with `next-intl` on the web. The server never sends display text, only codes (`reject { reason: "stop_overlap" }`), and each client translates. Emails (invite, password reset) go out in the recipient's language (D35) | Translating later would mean hunting for strings across every screen. With codes in the protocol, web and Android translate in their own way, and the API doesn't need to know each connection's language |
+| D35 | **Language in a cookie, not in the URL**: no route has a locale prefix. The proxy resolves the language in this order: `NEXT_LOCALE` cookie → `Accept-Language` (`pt`, `pt-BR` and `pt-PT` become pt-BR; anything else, en-US) → en-US. **`user.locale`** (a Better Auth additional field) is the source of truth: sign-up saves the language in use, sign-in overwrites the cookie with it, and the switcher (landing footer and user menu) updates both. Password reset uses `user.locale`; an email invite to someone without an account goes out in the inviter's `locale`, and `/join` detects the recipient's own. Android follows the device language unless the user chose one | App and invite links leave the app (email, WhatsApp): with a prefix they would carry the sender's language and could never change. The Service Worker precaches a single version of the app routes. SEO per language matters little for a portfolio aimed at remote jobs, and the en-US landing is the one Google indexes; if the landing ever needs pt-BR SEO, it can get a prefix without touching any app link. The precached HTML holds the text of the language at precache time, so switching languages asks the SW to precache the app routes again |
 
 ---
 
@@ -324,6 +325,7 @@ interface Clock     { now(); setTimeout(...) }          // fake in tests
 
 ```sql
 -- Better Auth manages: user, session, account, verification (IDs from the database's DEFAULT uuidv7(); check the configuration during setup)
+-- user gets a `locale` additional field ('pt-BR' | 'en-US', D35)
 -- Every id is a uuid (UUIDv7, D28): DEFAULT uuidv7() for what the server creates; what comes from the client arrives filled in
 trips          (id, name, start_date, end_date, owner_id, current_version, created_at, deleted_at)
 trip_members   (trip_id, user_id, role, color, joined_at, last_seen_at)              PK (trip_id, user_id)
@@ -349,6 +351,7 @@ op_receipts    (op_id PK, trip_id, user_id, outcome, version, reason, created_at
 
 - **UI:** Tailwind 4 + shadcn/ui on Radix (D31). A script generates, from `packages/tokens`, the CSS variables the shadcn theme reads.
 - **Public routes** (landing, sign in/up, join) with SSR. **App** (`/trips`, `/t/:id/...`) as client components on top of `sync`.
+- **Language (D35):** `next-intl` without i18n routing; the proxy resolves the locale (cookie → `Accept-Language` → en-US) and no URL carries it.
 - **Read-only offline (D23):** Service Worker with **Serwist** (`@serwist/turbopack`, because Next 16 builds with Turbopack; precache of the shell + app routes) and each trip's `confirmed` cached in IndexedDB. With no connection, the UI opens the plan and search but disables editing. Still the biggest technical risk on the web: validate it early (M1) with a "hello offline" page.
 - **Every business rule goes through the API.** No Server Actions/route handlers with domain logic, or mobile can't reuse them.
 - **REST** with the **Eden** client (types inferred from Elysia) + TanStack Query for the trip list, invites and members.
@@ -479,7 +482,7 @@ A checklist so no doors close now:
 - Respect `prefers-reduced-motion` in the animations of remote cards.
 
 **Interface**
-- Interface in pt-BR and en-US (D34); dates and times formatted by locale (`Intl`).
+- Interface in pt-BR and en-US (D34), language in a cookie and on the user (D35); dates and times formatted by locale (`Intl`).
 - Dark theme only in the MVP; the `tokens` are structured for a light theme from the start.
 - Avatar: the Google photo when there is one; otherwise, initials in the member's color.
 - **Fully responsive** (phone and desktop), with touch drag. Components are designed mobile-first, which also gets Android ahead.
