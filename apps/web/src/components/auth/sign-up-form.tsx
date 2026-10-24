@@ -12,9 +12,9 @@ import { Button } from '@/components/ui/button'
 import { FieldGroup } from '@/components/ui/field'
 import type { Locale } from '@/i18n/locale'
 import { errorCode } from '@/lib/api'
-import { PASSWORD_MAX, PASSWORD_MIN, signUp } from '@/lib/auth'
+import { PASSWORD_MIN, signUp } from '@/lib/auth'
 import { requestErrorMessage } from '@/lib/request-error'
-import { isEmail } from '@/lib/validation'
+import { isEmail, passwordLengthError } from '@/lib/validation'
 import { GoogleSignIn, NotImplementedLink } from './not-implemented'
 import { PasswordLength } from './password-length'
 
@@ -46,10 +46,7 @@ export function SignUpForm() {
 		const found: Errors = {}
 		if (!name.trim()) found.name = t('errors.nameRequired')
 		if (!isEmail(email)) found.email = t('errors.emailInvalid')
-		if (password.length < PASSWORD_MIN)
-			found.password = t('errors.passwordTooShort', { minimum: PASSWORD_MIN })
-		if (password.length > PASSWORD_MAX)
-			found.password = t('errors.passwordTooLong', { maximum: PASSWORD_MAX })
+		found.password = passwordLengthError(password, t)
 		return found
 	}
 
@@ -64,7 +61,7 @@ export function SignUpForm() {
 		const found = validate(fields)
 		setErrors(found)
 		setFormError(undefined)
-		if (Object.keys(found).length > 0) return
+		if (Object.values(found).some(Boolean)) return
 		setEmail(fields.email)
 		mutation.mutate({ ...fields, locale })
 	}
