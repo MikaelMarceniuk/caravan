@@ -22,6 +22,7 @@ check() {
 
 sql() {
 	# Single quotes on purpose: the variables are expanded by the container's shell.
+	# shellcheck disable=SC2016
 	"${compose[@]}" exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "$1"' _ "$1"
 }
 
