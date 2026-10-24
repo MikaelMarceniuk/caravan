@@ -31,7 +31,6 @@
 | 19 | Mensagens fora de ordem: tempos e plano de teste | `packages/sync` | 🟠 |
 | 20 | Disciplina de versões (P7) na prática | 1º deploy | 🟡 |
 | 21 | Limites novos (lock e cursores) | Presença e lock | 🟢 |
-| **E. Correções nos docs** | | Nada (mecânico) | 🟢 |
 | **F. Preparação prática** | | Auth, CI, deploy | 🟡 |
 
 ---
@@ -191,17 +190,6 @@ Faltam na tabela de limites (`architecture.md` §18):
 - `lock.acquire` por conexão (proposta: 10/s).
 - Locks simultâneos por aba (proposta: 3).
 - Confirmar que os 30/s de presença cobrem o cursor com throttle de 50 ms (20/s).
-
----
-
-## E. Correções nos docs
-
-Mecânicas; dá para fazer num commit só.
-
-- [ ] `planner.md` §4–7: `op_receipts` "retidos para sempre" contradiz a D19 (7 dias).
-- [ ] `planner.md` §8 e `architecture.md` §16: a porta se chama `Storage`; no §10 ela é `Cache`.
-- [ ] `planner.md` §3: "datas → gera os dias" contradiz a D12 (depende do item 2).
-- [ ] `architecture.md` §0: a D23 aparece depois da D25.
 
 ---
 

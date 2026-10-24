@@ -31,9 +31,9 @@
 | D20 | ~~A aba que cria a op grava no IndexedDB antes de avisar a líder~~ | **Substituída pela D23**: sem fila persistida, não há líder nem fila no IndexedDB |
 | D21 | **`Activity` no domínio e no protocolo**; "card" é só o componente visual (`ActivityCard`, `CardSheet`) | O nome do tipo de op é contrato (P7); a Agenda e o mobile não mostram cards. Glossário em [`CONTEXT.md`](../../CONTEXT.md) |
 | D22 | **Lock de edição por entidade**: só uma pessoa edita uma atividade, um stop, um título de dia ou o cabeçalho da viagem por vez | Elimina conflitos de escrita concorrente na origem; a UI mostra "Ana is editing" e bloqueia o resto |
+| D23 | **Offline só leitura**: o plano fica em cache (IndexedDB + Service Worker) para consulta; editar exige conexão | Mantém o valor no aeroporto/roaming sem fila offline, rebase de longa duração nem conflitos persistidos |
 | D24 | **Locks de edição no Postgres** (`edit_locks`), conferidos **dentro da transação** da op; Redis só para o efêmero | O que é promessa do produto fica no banco, o que é efêmero fica no Redis. Sem janela de corrida, e o lock continua valendo com o Redis fora do ar |
 | D25 | **Ajustes de desempenho do caminho quente**: lock conferido na mesma ida ao banco do prefetch; renovação de locks em lote por instância; `edit_locks` `UNLOGGED` sem índice em `expires_at`; entrega local pelo pub/sub nativo do Bun | O lock no Postgres custa ~0,1 ms numa edição de 50–200 ms; o gargalo real é o fan-out dos cursores, atacado com o pub/sub nativo |
-| D23 | **Offline só leitura**: o plano fica em cache (IndexedDB + Service Worker) para consulta; editar exige conexão | Mantém o valor no aeroporto/roaming sem fila offline, rebase de longa duração nem conflitos persistidos |
 | D26 | **`Place` = `{ name, lat, lon, countryCode, osmId }`**, guardado inteiro em `place_json` desde a v1 | `lat/lon` é o formato de qualquer mapa open source (MapLibre, Leaflet, OpenLayers) e de qualquer fonte de tiles OSM: o mapa pode ser trocado sem migração. O Photon já devolve tudo, então não custa nada guardar antes de o mapa existir |
 | D27 | **Mapa com MapLibre GL JS + tiles do OpenFreeMap**; sem Google Maps, sem fallback e sem servidor de tiles próprio | Tudo open source, grátis e sem chave; a biblioteca roda no navegador, então não há container. Trocar a fonte de tiles depois é mudar uma URL no estilo |
 | D28 | **IDs em UUIDv7, coluna `uuid`**: o que nasce no cliente (stops, atividades, `opId`) usa `newId()` do `core` (lib `uuid`, `v7()`); o que o servidor cria (usuários, viagens, convites por e-mail) usa `DEFAULT uuidv7()` do Postgres. O servidor valida todo ID vindo do cliente (seção 18) | O `opId` tem de nascer no cliente para o reenvio ser idempotente (D16), e o ID da entidade, para a UI otimista não precisar trocar IDs temporários. Uma função só no navegador, no Bun e no RN; o v7 é ordenado no tempo, então os INSERTs vão para o fim do índice |
@@ -310,7 +310,7 @@ view = pending.reduce(apply, confirmed.state)   (memoizado; é o que a UI render
 
 ```ts
 interface Transport { connect(url): Socket }            // web: WebSocket nativo. RN: idem
-interface Cache     { load(tripId); save(tripId, confirmed) }   // só leitura offline. web: IndexedDB. RN: expo-sqlite
+interface Storage   { load(tripId); save(tripId, confirmed) }   // só leitura offline. web: IndexedDB. RN: expo-sqlite
 interface Clock     { now(); setTimeout(...) }          // fake nos testes
 ```
 
