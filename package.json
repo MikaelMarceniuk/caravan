@@ -16,7 +16,8 @@
 		"test": "turbo run test",
 		"infra:up": "docker compose -f infra/compose.yml -f infra/compose.dev.yml up -d --wait",
 		"infra:down": "docker compose -f infra/compose.yml -f infra/compose.dev.yml down",
-		"infra:reset": "docker compose -f infra/compose.yml -f infra/compose.dev.yml down -v"
+		"infra:reset": "docker compose -f infra/compose.yml -f infra/compose.dev.yml down -v",
+		"infra:check": "infra/check.sh"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.6.3",
