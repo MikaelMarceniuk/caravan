@@ -3,7 +3,7 @@
 > Lista única do que falta decidir, conferir ou arrumar.
 > As decisões já tomadas estão em [`architecture.md`](./architecture.md) §0 e em [`deploy.md`](./deploy.md) §0; o vocabulário, em [`CONTEXT.md`](../CONTEXT.md).
 > Não há cronograma: cada item diz **o que ele bloqueia**. Quando um item for decidido, ele sai daqui e vira uma linha no §0 do documento certo. Os números são fixos: o de um item decidido não é reaproveitado.
-> Última revisão: 2026-10-23.
+> Última revisão: 2026-10-24.
 
 ---
 
@@ -13,7 +13,6 @@
 |---|---|---|---|
 | **A. Antes do primeiro código** ||||
 | 2 | Datas da viagem × datas dos stops | Schema de `trips`, NewTrip | 🔴 |
-| 3 | Validação: Zod ou TypeBox (`t`) do Elysia | `packages/core` | 🔴 |
 | 4 | Driver do Postgres e pool de conexões | Setup do Drizzle | 🔴 |
 | 6 | Membros e convites: REST antes do pipeline de ops | REST de membros/convites | 🟠 |
 | 7 | Stack da web (UI, versões, testes) | `apps/web` | 🟠 |
@@ -51,17 +50,6 @@
 - **B) Manter as datas próprias da viagem** e aceitar a assimetria (cada op valida só o que muda).
 
 **Recomendação para começar:** A, se o fluxo do NewTrip e o EmptyTrip aguentarem a mudança. Some uma regra e um tipo de aviso.
-
-### 3. Validação: Zod ou TypeBox (`t`) do Elysia 🔴
-
-**Por que importa:** é a primeira coisa escrita no `core`. O Elysia é mais rápido com o próprio `t` (TypeBox, compilado), e é com ele que o Eden infere os tipos do REST. Toda mensagem de WS passa pela validação.
-
-**Opções:**
-- **A) Zod 4 em tudo** (o Elysia aceita via Standard Schema). Uma fonte da verdade, e o custo por mensagem é baixo.
-- **B) TypeBox no `core`.** Mais rápido no servidor, mas o cliente carrega o TypeBox.
-- **C) Zod no `core` para ops e o `t` do Elysia só nas rotas REST.**
-
-**Recomendação para começar:** C. As ops, que são domínio, ficam em Zod no `core`. O REST, que é borda da API, fica com `t` e Eden. O custo por mensagem de WS é medido no microbenchmark do pipeline.
 
 ### 4. Driver do Postgres e pool de conexões 🔴
 
