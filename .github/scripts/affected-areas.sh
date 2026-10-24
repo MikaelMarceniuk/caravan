@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Decides which CI areas run (docs/planners/m1-foundation/1.monorepo.md, decision 12,
-# and docs/planners/m1-foundation/2.docker-compose.md, decision P6).
+# docs/planners/m1-foundation/2.docker-compose.md, decision P6, and 3.api-and-database.md, Q11).
 # Writes one `<area>=true|false` line per area to $GITHUB_OUTPUT, or to stdout when run locally.
 set -euo pipefail
 
-# Area name → path prefix of its workspaces. `api`, `web` and `mobile` join when their apps exist.
-declare -A areas=([packages]=packages/)
+# Area name → path of its workspaces (a workspace path is that path or below it).
+# `web` and `mobile` join when their apps exist.
+declare -A areas=([packages]=packages [api]=apps/api)
+# Workspace area → path regex of files outside the workspace that its tests also depend on.
+# The API tests run against the compose Postgres (docs/planners/m1-foundation/3.api-and-database.md, Q11).
+declare -A area_extra_paths=([api]='^infra/')
 # Area name → path regex, for areas that are not workspaces.
 declare -A path_areas=([infra]='^infra/')
 
@@ -30,7 +34,9 @@ else
 fi
 
 for area in "${!areas[@]}"; do
-	if [[ $run_all == true ]] || grep -q "^${areas[$area]}" <<<"$affected"; then
+	extra=${area_extra_paths[$area]:-}
+	if [[ $run_all == true ]] || grep -qE "^${areas[$area]}(/|$)" <<<"$affected" ||
+		{ [[ -n $extra ]] && grep -qE "$extra" <<<"$changed"; }; then
 		echo "$area=true" >>"$out"
 	else
 		echo "$area=false" >>"$out"
