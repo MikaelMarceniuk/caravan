@@ -1,5 +1,8 @@
 {
 	"$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
 	"root": false,
-	"extends": "//"
+	"extends": "//",
+	"files": {
+		"includes": ["**", "!src/db/migrations/meta"]
+	}
 }

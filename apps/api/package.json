@@ -3,9 +3,12 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"start": "bun src/index.ts",
 		"lint": "biome ci .",
 		"typecheck": "tsc -p tsconfig.json && tsc -p __tests__/tsconfig.json",
-		"test": "bun test"
+		"test": "bun test",
+		"db:generate": "drizzle-kit generate"
 	},
 	"dependencies": {
 		"drizzle-orm": "0.45.4",
