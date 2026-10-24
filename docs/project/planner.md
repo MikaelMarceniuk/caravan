@@ -1,203 +1,203 @@
-# Planejador de Viagem Colaborativo — Plano do Projeto
+# Collaborative Trip Planner — Project Plan
 
-> Nome: **Caravan**
-> Objetivo: projeto de portfólio para freelas e vagas remotas no exterior (pagamento em euro/dólar).
-> Plataformas: **Web (Next.js)** no MVP. **Android (Expo)** na v2, reaproveitando o mesmo backend e o mesmo motor de sincronização.
-> Arquitetura detalhada: [`architecture.md`](./architecture.md).
+> Name: **Caravan**
+> Goal: a portfolio project for freelance work and remote jobs abroad (paid in euros/dollars).
+> Platforms: **Web (Next.js)** in the MVP. **Android (Expo)** in v2, reusing the same backend and the same sync engine.
+> Detailed architecture: [`architecture.md`](./architecture.md).
 
 ---
 
 ## 1. Pitch
 
-Um grupo monta o roteiro de uma viagem junto, em tempo real. A viagem é dividida em **stops** (cidades, numa timeline), cada stop tem seus **dias** (colunas) e cada **atividade** é um card. Todos veem quem está online, quem está editando o quê e as mudanças dos outros na hora, sem flicker. Só uma pessoa edita cada coisa por vez ("Ana is editing"), então ninguém sobrescreve ninguém. Sem conexão (aeroporto, estrada, roaming), o plano continua aberto para consulta. Nenhuma edição confirmada se perde, mesmo se o servidor cair.
+A group builds a trip itinerary together, in real time. The trip is split into **stops** (cities, on a timeline), each stop has its **days** (columns), and each **activity** is a card. Everyone sees who is online, who is editing what, and everyone else's changes right away, with no flicker. Only one person edits each thing at a time ("Ana is editing"), so nobody overwrites anybody. With no connection (airport, road, roaming), the plan stays open for reading. No confirmed edit is lost, even if the server goes down.
 
-O produto é simples de propósito. A complexidade está no que ele demonstra tecnicamente.
+The product is simple on purpose. The complexity is in what it demonstrates technically.
 
 ---
 
-## 2. O que o projeto precisa demonstrar
+## 2. What the project must demonstrate
 
-| Capacidade | Onde aparece |
+| Capability | Where it shows |
 |---|---|
-| Tempo real / WebSocket | Operações e presença ao vivo |
-| Consistência e concorrência | Servidor autoritativo, operações versionadas, rebase |
-| Resiliência | Log de operações, recibos de op, reconexão, cache offline só leitura |
-| Escala horizontal | 2+ instâncias da API com Redis pub/sub |
-| Redis | Presença efêmera (TTL) + pub/sub; o que é promessa (locks de edição) fica no Postgres |
-| Mensageria | Pub/sub entre instâncias |
-| Integração externa | Busca de lugares (Photon/OSM) |
-| Testes | Unitários + property-based (convergência) + integração (múltiplos clientes WS) + chaos test |
-| Performance | Load test com k6 (conexões simultâneas, latência p95 do broadcast) |
-| Fullstack | Next.js + núcleo de sync agnóstico de plataforma (pronto para o Android na v2) |
-| DevOps | Docker Compose, Caddy, Cloudflare, CI/CD com deploy sem downtime, IaC (OpenTofu) |
+| Real time / WebSocket | Live ops and presence |
+| Consistency and concurrency | Authoritative server, versioned ops, rebase |
+| Resilience | Op log, op receipts, reconnection, read-only offline cache |
+| Horizontal scaling | 2+ API instances with Redis pub/sub |
+| Redis | Ephemeral presence (TTL) + pub/sub; what is a promise (edit locks) lives in Postgres |
+| Messaging | Pub/sub between instances |
+| External integration | Place search (Photon/OSM) |
+| Tests | Unit + property-based (convergence) + integration (multiple WS clients) + chaos test |
+| Performance | Load test with k6 (concurrent connections, broadcast p95 latency) |
+| Full stack | Next.js + a platform-agnostic sync core (ready for Android in v2) |
+| DevOps | Docker Compose, Caddy, Cloudflare, CI/CD with zero-downtime deploys, IaC (OpenTofu) |
 
 ---
 
-## 3. Escopo da v1
+## 3. v1 scope
 
-### Dentro
-- Auth: e-mail/senha, esqueci a senha e "Try the demo" (sessão anônima) com Better Auth. Google e Apple ficam para depois
-- Lista de viagens (próximas/passadas, quem está online, convites pendentes)
-- Criar viagem (nome e datas; primeiro stop e convites opcionais). Os dias vêm dos stops (D12); se a viagem tem datas próprias é o item 2 do [`open-topics.md`](./open-topics.md)
-- Convites: link (papel, expira em 7 dias, reset) e por e-mail (reenviar, aceitar/recusar); papéis owner e editor
-- **Overview:** lista de stops, adicionar/editar/remover stop (cidade, datas, transporte, cor), aviso de gaps
-- **Board** por stop: dias como colunas (título editável), cards ordenados por horário
-  - Criar, editar e excluir cards (título, horário, local, notas) no CardSheet
-  - Mover cards entre dias (drag & drop)
-- Presença: avatares, "fulano está editando" (card e campo)
-- Offline **só leitura**: o plano fica sempre consultável (Overview, Board e CardSheet); editar exige conexão; status Synced/Syncing/Offline + banner "viewing only"
-- Edição exclusiva: lock por entidade ("Ana is editing"), toasts com *Restore* quando uma edição é rejeitada
-- Busca de lugares (online)
-- **Web responsiva completa** (celular e desktop), com drag por toque
-- "Try the demo": sessão anônima com uma viagem pronta, além do GIF/vídeo
+### In
+- Auth: email/password, forgot password and "Try the demo" (anonymous session) with Better Auth. Google and Apple come later
+- Trip list (upcoming/past, who is online, pending invites)
+- Create a trip (name and dates; first stop and invites are optional). Days come from the stops (D12); whether the trip has its own dates is item 2 of [`open-topics.md`](./open-topics.md)
+- Invites: link (role, expires in 7 days, reset) and email (resend, accept/decline); owner and editor roles
+- **Overview:** list of stops, add/edit/remove a stop (city, dates, transport, color), gap warning
+- **Board** per stop: days as columns (editable title), cards ordered by time
+  - Create, edit and delete cards (title, time, place, notes) in the CardSheet
+  - Move cards between days (drag & drop)
+- Presence: avatars, "so-and-so is editing" (card and field)
+- **Read-only** offline: the plan can always be read (Overview, Board and CardSheet); editing needs a connection; Synced/Syncing/Offline status + "viewing only" banner
+- Exclusive editing: a lock per entity ("Ana is editing"), toasts with *Restore* when an edit is rejected
+- Place search (online)
+- **Fully responsive web** (phone and desktop), with touch drag
+- "Try the demo": an anonymous session with a ready-made trip, on top of the GIF/video
 
-### Fora
-- **v1.x:** Agenda, login com Google e Apple, busca ⌘K, cursores e drag ao vivo, timeline por mês na Overview, feed "All activity"
-- **Documentos/anexos** e offline de arquivos
+### Out
+- **v1.x:** Agenda, Google and Apple sign-in, ⌘K search, live cursors and drag, month timeline in the Overview, "All activity" feed
+- **Documents/attachments** and offline files
 - **Android** (Expo)
-- Chat do grupo
-- Votação em atividades
-- Divisão de gastos
-- Mapa com rota do dia
+- Group chat
+- Voting on activities
+- Expense splitting
+- Map with the day's route
 - iOS
 
-Cada item tem versão no roadmap (§8).
+Each item has a version in the roadmap (§8).
 
 ---
 
-## 4–7. Arquitetura, consistência, persistência e stack
+## 4–7. Architecture, consistency, persistence and stack
 
-Movidos para [`architecture.md`](./architecture.md), que é a fonte da verdade técnica. Resumo:
+Moved to [`architecture.md`](./architecture.md), the technical source of truth. Summary:
 
-- **Monorepo** (Bun + Turborepo): `apps/api` (Elysia), `apps/web` (Next.js), `packages/core` (domínio + `decide()` compartilhado entre cliente e servidor), `packages/sync` (motor de sync do cliente), `packages/tokens`.
-- **Consistência:** servidor autoritativo, ops versionadas por viagem, lock `FOR UPDATE` na linha da viagem, recibo por op. **Lock de edição por entidade** (no Postgres, conferido na transação da op) impede duas pessoas de editarem a mesma coisa; não há conflitos para resolver.
-- **Tempo real:** WebSocket + Redis pub/sub entre 2 instâncias atrás do Caddy. O cliente detecta buracos de versão e pede `resync`.
-- **Presença:** só Redis (hash com TTL por campo + pub/sub para cursor e drag).
-- **Persistência:** Postgres (projeção + `ops_log` retido inteiro + `op_receipts` por 7 dias, D19); no cliente, IndexedDB + Service Worker (Serwist).
-- **Stack:** Bun, Elysia, Drizzle, Zod, Better Auth, Resend, Next.js 16, Tailwind 4, shadcn/ui (Radix), dnd-kit, TanStack Query, Photon (lugares), fast-check, Playwright, k6, toxiproxy, Docker Compose, GitHub Actions, Caddy, Cloudflare, VPS ARM da Hetzner para tudo ([`deploy.md`](./deploy.md)).
+- **Monorepo** (Bun + Turborepo): `apps/api` (Elysia), `apps/web` (Next.js), `packages/core` (domain + `decide()`, shared by client and server), `packages/sync` (the client sync engine), `packages/tokens`.
+- **Consistency:** authoritative server, ops versioned per trip, `FOR UPDATE` lock on the trip row, a receipt per op. An **edit lock per entity** (in Postgres, checked inside the op's transaction) stops two people from editing the same thing; there are no conflicts to resolve.
+- **Real time:** WebSocket + Redis pub/sub between 2 instances behind Caddy. The client detects version gaps and asks for a `resync`.
+- **Presence:** Redis only (a hash with per-field TTL + pub/sub for cursor and drag).
+- **Persistence:** Postgres (projection + `ops_log` kept in full + `op_receipts` for 7 days, D19); on the client, IndexedDB + Service Worker (Serwist).
+- **Stack:** Bun, Elysia, Drizzle, Zod, Better Auth, Resend, Next.js 16, Tailwind 4, shadcn/ui (Radix), dnd-kit, TanStack Query, Photon (places), fast-check, Playwright, k6, toxiproxy, Docker Compose, GitHub Actions, Caddy, Cloudflare, one Hetzner ARM VPS for everything ([`deploy.md`](./deploy.md)).
 
 ---
 
 ## 8. Roadmap
 
-Sem prazos: o que importa é a **ordem** e o que entra em cada versão. Cada marco termina com algo rodando em produção. Se algo apertar, a feature muda de versão em vez de ser cortada.
+No deadlines: what matters is the **order** and what goes into each version. Each milestone ends with something running in production. If time gets tight, a feature moves to a later version instead of being cut.
 
-Valem para todos os marcos: responsividade e acessibilidade fazem parte de cada tela, e o código nasce com TDD ([`development.md`](./development.md)).
+These apply to every milestone: responsiveness and accessibility are part of every screen, and code is written with TDD ([`development.md`](./development.md)).
 
-### v1 — vitrine
+### v1 — showcase
 
-#### M1 — Fundação
-- [ ] Monorepo (Bun + Turborepo), Biome, CI básico
-- [ ] Comprar o domínio (Cloudflare Registrar)
+#### M1 — Foundation
+- [ ] Monorepo (Bun + Turborepo), Biome, basic CI
+- [ ] Buy the domain (Cloudflare Registrar)
 - [ ] Docker Compose (Postgres, Redis)
-- [ ] Schema do banco + migrations (Drizzle)
-- [ ] Auth com Better Auth: e-mail e senha (sem envio de e-mail)
-- [ ] REST: criar e listar viagens
-- [ ] **Deploy mínimo na prod:** CAX11, Caddy, Cloudflare, CI fazendo deploy (1 instância da API)
-- [ ] **Spike de risco:** página Next.js abrindo offline com Serwist
-- [ ] **Spike de risco:** `Bun.sql` no pipeline (`FOR UPDATE` em série, pool cheio → `busy`, timeout de transação, migrations e Better Auth); plano B: `postgres.js` (`architecture.md` D30)
+- [ ] Database schema + migrations (Drizzle)
+- [ ] Auth with Better Auth: email and password (no email sending)
+- [ ] REST: create and list trips
+- [ ] **Minimal production deploy:** CAX11, Caddy, Cloudflare, CI deploying (1 API instance)
+- [ ] **Risk spike:** a Next.js page opening offline with Serwist
+- [ ] **Risk spike:** `Bun.sql` in the pipeline (`FOR UPDATE` in series, full pool → `busy`, transaction timeout, migrations and Better Auth); plan B: `postgres.js` (`architecture.md` D30)
 
-**No fim:** login e lista de viagens no ar.
+**Done when:** sign-in and the trip list are live.
 
-#### M2 — Fatia de sync (stops)
-- [ ] `core`: `requirements()` + `decide()` síncrono + mutations (efeitos) para as ops de stop, invariantes de stops, upcasters
-- [ ] Servidor WebSocket: `hello`/`welcome`, `op`, `ack`, `reject`, `resync`, ticket de auth
-- [ ] Pipeline de ops (lock por viagem, prefetch, `op_receipts`, `ops_log` com efeitos)
-- [ ] `packages/sync`: confirmado + pendentes, rebase, buffer de ordem, portas Transport/Storage/Clock
-- [ ] Overview básica (lista de stops; adicionar, editar e remover) + busca de lugares (Photon) + toast de `stop_overlap`
-- [ ] **Testes:** unitários, **property-based** (N clientes, entrega aleatória → convergem) e **integração** (N clientes WS contra a API real)
-- [ ] **Homologação sob demanda** (`deploy.md` §14)
+#### M2 — Sync slice (stops)
+- [ ] `core`: `requirements()` + synchronous `decide()` + mutations (effects) for the stop ops, stop invariants, upcasters
+- [ ] WebSocket server: `hello`/`welcome`, `op`, `ack`, `reject`, `resync`, auth ticket
+- [ ] Op pipeline (per-trip lock, prefetch, `op_receipts`, `ops_log` with effects)
+- [ ] `packages/sync`: confirmed + pending, rebase, ordering buffer, Transport/Storage/Clock ports
+- [ ] Basic Overview (list of stops; add, edit and remove) + place search (Photon) + `stop_overlap` toast
+- [ ] **Tests:** unit, **property-based** (N clients, random delivery → they converge) and **integration** (N WS clients against the real API)
+- [ ] **On-demand staging** (`deploy.md` §14)
 
-**No fim:** duas abas editando stops juntas, em produção.
+**Done when:** two tabs edit stops together, in production.
 
-#### M3 — Plano completo
-- [ ] `core` e pipeline para as ops de dias e atividades, ordenação por horário
-- [ ] Board por stop (dias, atividades por horário) + CardSheet
-- [ ] Drag & drop: mouse, toque, teclado e "Mover para…"
+#### M3 — Full plan
+- [ ] `core` and pipeline for the day and activity ops, ordering by time
+- [ ] Board per stop (days, activities by time) + CardSheet
+- [ ] Drag & drop: mouse, touch, keyboard and "Move to…"
 
-**No fim:** uma viagem inteira planejada no app.
+**Done when:** a whole trip can be planned in the app.
 
-#### M4 — Colaboração
-- [ ] Infra de e-mail: Resend, domínio verificado, templates
-- [ ] Convites: link (papel, expira em 7 dias, reset) e e-mail (reenviar, aceitar/recusar); join
+#### M4 — Collaboration
+- [ ] Email infrastructure: Resend, verified domain, templates
+- [ ] Invites: link (role, expires in 7 days, reset) and email (resend, accept/decline); join
 - [ ] "Forgot password"
-- [ ] Membros como ops de sistema (entrar, sair, trocar papel)
-- [ ] Presença: avatares e "editando" (card e campo)
-- [ ] Lock de edição por entidade (`lock.acquire/release`, tabela `edit_locks`, `tabId`, conferência na transação) + UI "Ana is editing" + toast de `locked` com *Restore with my change*
+- [ ] Members as system ops (join, leave, change role)
+- [ ] Presence: avatars and "editing" (card and field)
+- [ ] Edit lock per entity (`lock.acquire/release`, `edit_locks` table, `tabId`, check inside the transaction) + "Ana is editing" UI + `locked` toast with *Restore with my change*
 
-**No fim:** duas pessoas planejando juntas de verdade.
+**Done when:** two people really plan together.
 
-#### M5 — Escala e resiliência
-- [ ] Redis pub/sub + 2 instâncias da API atrás do Caddy; rolling deploy
-- [ ] Teste: clientes em instâncias diferentes convergem e o lock é exclusivo entre instâncias
-- [ ] Reconexão com `lastVersion`, backoff, status Synced/Syncing/Offline + banner "viewing only"
-- [ ] Cache de leitura (IndexedDB) + Service Worker: abrir o plano offline em só leitura
-- [ ] Teste de compat de protocolo (API N e N+1 lado a lado, fixtures N−1)
-- [ ] **Chaos test** (toxiproxy): derrubar instância, Redis e rede no meio de edições → nada se perde
+#### M5 — Scale and resilience
+- [ ] Redis pub/sub + 2 API instances behind Caddy; rolling deploy
+- [ ] Test: clients on different instances converge, and the lock is exclusive across instances
+- [ ] Reconnection with `lastVersion`, backoff, Synced/Syncing/Offline status + "viewing only" banner
+- [ ] Read cache (IndexedDB) + Service Worker: open the plan offline, read-only
+- [ ] Protocol compatibility test (API N and N+1 side by side, N−1 fixtures)
+- [ ] **Chaos test** (toxiproxy): kill an instance, Redis and the network in the middle of edits → nothing is lost
 
-**No fim:** a parte técnica completa.
+**Done when:** the technical side is complete.
 
-#### M6 — Lançamento
-- [ ] "Try the demo": sessão anônima com uma viagem pronta (o seed)
-- [ ] Infra completa: OpenTofu, backups no R2, Grafana Cloud, Sentry, UptimeRobot
-- [ ] Upgrade para CAX21 + load test com k6 (inclui a renovação de locks) → números no README e na landing
-- [ ] README: arquitetura, diagrama, decisões e trade-offs, como rodar local
-- [ ] GIF/vídeo: 3 navegadores editando juntos + chaos demo
-- [ ] Post no LinkedIn + projeto em destaque no perfil
+#### M6 — Launch
+- [ ] "Try the demo": an anonymous session with a ready-made trip (the seed)
+- [ ] Full infrastructure: OpenTofu, backups to R2, Grafana Cloud, Sentry, UptimeRobot
+- [ ] Upgrade to CAX21 + k6 load test (including lock renewal) → numbers in the README and on the landing page
+- [ ] README: architecture, diagram, decisions and trade-offs, how to run locally
+- [ ] GIF/video: 3 browsers editing together + chaos demo
+- [ ] LinkedIn post + project featured on the profile
 
-**No fim:** a vitrine pronta.
+**Done when:** the showcase is ready.
 
 ### v1.x
-- **Agenda** (linha do tempo do dia, "agora" e "up next"), junto com o fuso horário do stop
-- Login com Google e Apple
-- Busca ⌘K na viagem
-- Cursores e drag ao vivo
-- Timeline por mês na Overview
-- Feed "All activity"
-- Homologação que acorda ao acessar (Cloudflare Worker)
+- **Agenda** (the day's timeline, "now" and "up next"), together with the stop's time zone
+- Google and Apple sign-in
+- ⌘K search inside the trip
+- Live cursors and drag
+- Month timeline in the Overview
+- "All activity" feed
+- Staging that wakes up on access (Cloudflare Worker)
 
 ### v2
-- **Android (Expo):** Agenda + Board + CardSheet sobre `packages/sync`; checklist em `architecture.md` §16
-- **Mapa** com rota do dia (MapLibre + OpenFreeMap, D27)
-- **Documentos/anexos** (R2/MinIO, presigned upload) + offline por arquivo/stop/viagem
-- Histórico / "desfazer" usando o ops log
-- Transporte como entidade
-- Papel *viewer* (só leitura)
+- **Android (Expo):** Agenda + Board + CardSheet on top of `packages/sync`; checklist in `architecture.md` §16
+- **Map** with the day's route (MapLibre + OpenFreeMap, D27)
+- **Documents/attachments** (R2/MinIO, presigned upload) + offline per file/stop/trip
+- History / "undo" using the op log
+- Transport as an entity
+- *Viewer* role (read-only)
 
 ### v3+
-- Chat do grupo
-- Votação em atividades
-- Divisão de gastos multi-moeda
+- Group chat
+- Voting on activities
+- Multi-currency expense splitting
 - iOS
 
 ---
 
-## 9. Vitrine (o que mostrar)
+## 9. Showcase (what to show)
 
-- **GIF principal:** dois navegadores + um celular lado a lado, cursores e cards se movendo; um deles perde a conexão e continua vendo o plano.
-- **Chaos demo:** matar uma instância da API ao vivo, sem perda de dados; derrubar o Redis e mostrar que o lock de edição continua valendo.
-- **Edição exclusiva demo:** Ana abre um card, Leo vê "Ana is editing"; Ana fecha e Leo edita.
-- **Números:** "X conexões simultâneas, p95 de broadcast em Y ms" (k6).
-- **README com "Decisões de design":**
-  - Servidor autoritativo vs CRDT
-  - `core` compartilhado (functional core, imperative shell)
-  - Lock de edição em vez de resolução de conflitos (e por que offline é só leitura)
-  - Ordem do broadcast entre instâncias e detecção de buracos
-  - Presença em Redis vs lock de edição no banco (efêmero × promessa)
-  - Log de operações retido inteiro: por que não compactar (ainda)
-- **Post no LinkedIn:** o problema, a decisão principal, o demo e o link.
-- Links: repositório público, web ao vivo.
+- **Main GIF:** two browsers + a phone side by side, cursors and cards moving; one of them loses its connection and keeps seeing the plan.
+- **Chaos demo:** kill an API instance live, with no data loss; take Redis down and show that the edit lock still holds.
+- **Exclusive editing demo:** Ana opens a card, Leo sees "Ana is editing"; Ana closes it and Leo edits.
+- **Numbers:** "X concurrent connections, broadcast p95 of Y ms" (k6).
+- **README with "Design decisions":**
+  - Authoritative server vs CRDT
+  - Shared `core` (functional core, imperative shell)
+  - Edit lock instead of conflict resolution (and why offline is read-only)
+  - Broadcast ordering across instances and gap detection
+  - Presence in Redis vs edit lock in the database (ephemeral × promise)
+  - Op log kept in full: why not compact it (yet)
+- **LinkedIn post:** the problem, the main decision, the demo and the link.
+- Links: public repository, live web app.
 
 ---
 
-## 10. Riscos e cortes possíveis
+## 10. Risks and possible cuts
 
-| Risco | Mitigação / corte |
+| Risk | Mitigation / cut |
 |---|---|
-| Sync engine demorar mais | É prioridade; ⌘K, drag ao vivo e login social já estão na v1.x. Se atrasar mais, outras features mudam de versão (§8) |
-| Next.js offline (Service Worker) | Spike no M1; plano B: rotas do app como SPA estática servida pelo SW; plano C: sem offline no MVP (só o banner) |
-| `Bun.sql` instável no pipeline | Spike no M1; plano B: `postgres.js` (mesma API, o Drizzle esconde o driver) |
-| Overview (timeline) trabalhosa | Primeiro uma lista simples de stops; a timeline por mês vem depois |
-| Responsivo completo atrasar | O drag por toque pode esperar: o "Mover para…" (exigido pela WCAG) já cobre o celular |
-| Faltar design de celular | Derivar dos componentes desktop; revisar depois |
-| Escopo crescer | Tudo fora da seção 3 vai para uma versão seguinte do roadmap (§8) |
+| The sync engine takes longer | It is the priority; ⌘K, live drag and social sign-in are already in v1.x. If it slips further, other features move to a later version (§8) |
+| Next.js offline (Service Worker) | Spike in M1; plan B: app routes as a static SPA served by the SW; plan C: no offline in the MVP (banner only) |
+| `Bun.sql` unstable in the pipeline | Spike in M1; plan B: `postgres.js` (same API, Drizzle hides the driver) |
+| Overview (timeline) is a lot of work | First a simple list of stops; the month timeline comes later |
+| Full responsiveness slips | Touch drag can wait: "Move to…" (required by WCAG) already covers phones |
+| No phone design | Derive it from the desktop components; review later |
+| Scope grows | Anything outside section 3 goes to a later version in the roadmap (§8) |

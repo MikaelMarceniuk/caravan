@@ -1,251 +1,252 @@
 # Caravan — Deploy
 
-> Infraestrutura de produção e desenvolvimento. A arquitetura da aplicação está em [`architecture.md`](./architecture.md).
-> Última revisão: 2026-10-23.
+> Production and development infrastructure. The application architecture is in [`architecture.md`](./architecture.md).
+> Last revised: 2026-10-24.
 
 ---
 
-## 0. Decisões
+## 0. Decisions
 
-| # | Decisão | Motivo |
+| # | Decision | Reason |
 |---|---|---|
-| P1 | **Prod inteira numa VPS ARM da Hetzner**, com Docker Compose. Começa na CAX11 (2 vCPU, 4 GB) e sobe para a CAX21 (4 vCPU, 8 GB) antes do teste de carga ou quando a RAM apertar | Custo ~€6,49/mês (CAX21: ~€10,99); Postgres e Redis na mesma máquina da API (seção 1); a prod é reproduzível com um compose. O upgrade só de CPU/RAM mantém o disco e permite voltar |
-| P2 | **Web na mesma VPS e na mesma origem** que a API (sem Vercel) | Sem CORS/preflight nem cookie entre subdomínios; um pipeline só; o CDN vem do Cloudflare |
-| P3 | **Caddy** como proxy/LB | TLS, LB com health check ativo e WS em poucas linhas; binário único |
-| P4 | **Cloudflare** (DNS + proxy + Registrar) | DDoS, cache dos assets estáticos, certificado de origem grátis |
-| P5 | **ARM ponta a ponta** | Máquina de dev aarch64, runner ARM grátis no GitHub, Hetzner ARM mais barata; sem emulação |
-| P9 | **Repositório público** no GitHub | É vitrine de portfólio, e o runner ARM e o Actions só são grátis em repo público. Segredos nunca entram no repo (seção 6) |
-| P6 | **Homologação sob demanda** numa CAX11 separada, criada para uma branch e apagada sozinha depois de 1h sem uso (seção 14) | A Hetzner cobra servidor desligado, então economizar exige apagar. A homol testa o que o compose local não testa: celular real (SW exige HTTPS), Cloudflare/Caddy/WS reais e o rolling da P7 |
-| P7 | **Protocolo "leitor antes de escritor"** (expand/contract também para ops e efeitos) | Rolling com instâncias mistas e rollback automático sem divergência (seção 5) |
-| P8 | **Dual-stack: IPv4 + IPv6** (IPv4 a ~€0,50/mês por servidor) | IPv6-only quebra a saída para serviços sem IPv6 (GitHub/GHCR, Grafana Cloud, Photon) e o SSH vindo dos runners do GitHub, que não têm IPv6 |
+| P1 | **All of production on one Hetzner ARM VPS**, with Docker Compose. It starts on a CAX11 (2 vCPU, 4 GB) and moves up to a CAX21 (4 vCPU, 8 GB) before the load test or when RAM gets tight | Cost ~€6.49/month (CAX21: ~€10.99); Postgres and Redis on the same machine as the API (section 1); production is reproducible with one compose file. A CPU/RAM-only upgrade keeps the disk and can be rolled back |
+| P2 | **Web on the same VPS and the same origin** as the API (no Vercel) | No CORS/preflight and no cross-subdomain cookies; a single pipeline; the CDN comes from Cloudflare |
+| P3 | **Caddy** as proxy/LB | TLS, LB with active health checks and WS in a few lines; a single binary |
+| P4 | **Cloudflare** (DNS + proxy + Registrar) | DDoS protection, static asset caching, free origin certificate |
+| P5 | **ARM end to end** | aarch64 dev machine, free ARM runner on GitHub, cheaper Hetzner ARM; no emulation |
+| P6 | **On-demand staging** on a separate CAX11, created for a branch and deleted on its own after 1h without use (section 14) | Hetzner bills stopped servers, so saving money means deleting. Staging tests what the local compose can't: a real phone (the SW requires HTTPS), real Cloudflare/Caddy/WS and the P7 rolling deploy |
+| P7 | **"Reader before writer" protocol** (expand/contract for ops and effects too) | Rolling deploys with mixed instances and automatic rollback without divergence (section 5) |
+| P8 | **Dual stack: IPv4 + IPv6** (IPv4 at ~€0.50/month per server) | IPv6-only breaks outbound traffic to services without IPv6 (GitHub/GHCR, Grafana Cloud, Photon) and SSH from GitHub runners, which have no IPv6 |
+| P9 | **Public repository** on GitHub | It is a portfolio showcase, and the ARM runner and Actions are only free for public repos. Secrets never go into the repo (section 6) |
 
-**Alternativa considerada:** Oracle Cloud Always Free (A1: 2 OCPU / 12 GB, €0). Descartada pelos riscos de recolhimento de instância ociosa, falta de capacidade na região e encerramento de conta. A Hetzner custa ~€6,49/mês e é previsível. O provisionamento em código (seção 6) mantém a migração barata nos dois sentidos.
+**Alternative considered:** Oracle Cloud Always Free (A1: 2 OCPU / 12 GB, €0). Rejected because of the risks of idle instance reclamation, lack of capacity in the region and account termination. Hetzner costs ~€6.49/month and is predictable. Provisioning as code (section 6) keeps migrating cheap in both directions.
 
 ---
 
-## 1. Por que VPS e não PaaS ou banco gerenciado
+## 1. Why a VPS and not a PaaS or a managed database
 
-Cada op segura o lock da viagem (`FOR UPDATE`) durante ~5–6 queries.
+Each op holds the trip lock (`FOR UPDATE`) for ~5–6 queries.
 
-| Postgres | RTT por query | Lock por op | Teto por viagem |
+| Postgres | RTT per query | Lock per op | Ceiling per trip |
 |---|---|---|---|
-| Mesmo host | ~0,1 ms | ~1–2 ms | centenas a milhares de ops/s |
-| Gerenciado (Neon, Supabase) | 2–20 ms | 30–100 ms | dezenas de ops/s |
+| Same host | ~0.1 ms | ~1–2 ms | hundreds to thousands of ops/s |
+| Managed (Neon, Supabase) | 2–20 ms | 30–100 ms | tens of ops/s |
 
-- **Redis gerenciado** (Upstash) cobra por comando, e cursor via pub/sub a cada 50 ms é o pior caso.
-- **Fly, Railway e Render** custam 3–5× mais e escondem o "2 instâncias atrás de um LB" que a landing mostra.
+- **Managed Redis** (Upstash) charges per command, and cursors over pub/sub every 50 ms are the worst case.
+- **Fly, Railway and Render** cost 3–5× more and hide the "2 instances behind a LB" that the landing page shows off.
 
 ---
 
-## 2. Topologia
+## 2. Topology
 
 ```
-Browser ──HTTPS/WSS──► Cloudflare (proxy, cache de /_next/static/*)
-                            │  Full (strict) · certificado de origem
+Browser ──HTTPS/WSS──► Cloudflare (proxy, caches /_next/static/*)
+                            │  Full (strict) · origin certificate
                             ▼
-      Hetzner Cloud Firewall: 443 só dos IPs do Cloudflare · 22 só por chave
+      Hetzner Cloud Firewall: 443 only from Cloudflare IPs · 22 key-only
                             ▼
       ┌──────────────── VPS CAX11 · Docker Compose ─────────────────┐
       │ caddy :443                                                   │
-      │   /api/*, /ws  → api-1, api-2   (least_conn, /ready a cada 5s)│
+      │   /api/*, /ws  → api-1, api-2   (least_conn, /ready every 5s)│
       │   /*           → web-1, web-2   (round_robin, /healthz)      │
-      │ api-1, api-2   Bun · binário compilado                       │
+      │ api-1, api-2   Bun · compiled binary                         │
       │ web-1, web-2   Next.js standalone (Node 24)                  │
-      │ postgres 18    volume local                                  │
-      │ redis 8        sem persistência                              │
+      │ postgres 18    local volume                                  │
+      │ redis 8        no persistence                                │
       │ backup         cron: pg_dump → Cloudflare R2                 │
       └──────────────────────────────────────────────────────────────┘
 ```
 
-**Rotas (mesma origem `caravan.x`):**
+**Routes (same origin `caravan.x`):**
 
-| Caminho | Destino |
+| Path | Target |
 |---|---|
-| `/api/auth/*` | Better Auth (na API) |
+| `/api/auth/*` | Better Auth (inside the API) |
 | `/api/*` | REST |
 | `/ws` | WebSocket gateway |
 | `/*` | Next.js |
 
-Só o Caddy está na rede `edge`. Postgres e Redis ficam na rede interna, **sem porta publicada**. O Docker passa por cima do ufw, então o firewall de host não protege portas publicadas; o controle fica no Hetzner Cloud Firewall.
+Only Caddy is on the `edge` network. Postgres and Redis live on the internal network, **with no published port**. Docker bypasses ufw, so the host firewall doesn't protect published ports; access control lives in the Hetzner Cloud Firewall.
 
 ---
 
-## 3. Serviços
+## 3. Services
 
-| Serviço | Imagem | Memória (limite) | Notas |
+| Service | Image | Memory (limit) | Notes |
 |---|---|---|---|
-| caddy | `caddy:2` | 64 MB | Certificado de origem do Cloudflare em arquivo (15 anos, sem ACME) |
-| api-1/2 | `ghcr.io/<user>/caravan-api:<sha>` | 256 MB cada | `bun build --compile` sobre `distroless/base-nossl`; graceful shutdown (seção 5) |
-| web-1/2 | `ghcr.io/<user>/caravan-web:<sha>` | 256 MB cada | `output: "standalone"` sobre `node:24-slim` |
-| postgres | `postgres:18` | 1 GB | `shared_buffers=256MB`, `effective_cache_size=1GB`, `max_connections=50`. Na CAX21: 2 GB, `shared_buffers=1GB`, `effective_cache_size=4GB` |
-| redis | `redis:8` | 300 MB | `maxmemory 256mb`, `save ""`, `appendonly no` (presença, pub/sub, cache e rate limit são efêmeros) |
-| backup | imagem pequena com `pg_dump` + `rclone` | 128 MB | Diário, retenção de 7 dias no R2 |
+| caddy | `caddy:2` | 64 MB | Cloudflare origin certificate in a file (15 years, no ACME) |
+| api-1/2 | `ghcr.io/<user>/caravan-api:<sha>` | 256 MB each | `bun build --compile` on `distroless/base-nossl`; graceful shutdown (section 5) |
+| web-1/2 | `ghcr.io/<user>/caravan-web:<sha>` | 256 MB each | `output: "standalone"` on `node:24-slim` |
+| postgres | `postgres:18` | 1 GB | `shared_buffers=256MB`, `effective_cache_size=1GB`, `max_connections=50`. On the CAX21: 2 GB, `shared_buffers=1GB`, `effective_cache_size=4GB` |
+| redis | `redis:8` | 300 MB | `maxmemory 256mb`, `save ""`, `appendonly no` (presence, pub/sub, cache and rate limiting are ephemeral) |
+| backup | small image with `pg_dump` + `rclone` | 128 MB | Daily, 7-day retention on R2 |
 
 **Health checks:**
-- `api`: `/healthz` (processo vivo) e `/ready` (Postgres e Redis respondendo; vira 503 durante o shutdown).
+- `api`: `/healthz` (process alive) and `/ready` (Postgres and Redis answering; returns 503 during shutdown).
 - `web`: `/healthz`.
 
 ---
 
-## 4. Cache e Cloudflare
+## 4. Cache and Cloudflare
 
-- `/_next/static/*` → `Cache-Control: public, max-age=31536000, immutable`. O Cloudflare guarda em cache sem regra extra.
-- **`/sw.js` e `/manifest.webmanifest` → `no-cache`.** Se o Service Worker ficar em cache, os clientes nunca recebem atualização.
-- `/api/*` e `/ws` → nunca em cache (`Cache-Control: no-store`).
-- WebSocket pelo proxy do Cloudflare: o timeout de inatividade é de 100 s; o ping do cliente vai a cada 25 s.
-- IP real do cliente: `CF-Connecting-IP`, confiável só porque a origem aceita apenas IPs do Cloudflare.
+- `/_next/static/*` → `Cache-Control: public, max-age=31536000, immutable`. Cloudflare caches it with no extra rule.
+- **`/sw.js` and `/manifest.webmanifest` → `no-cache`.** If the Service Worker gets cached, clients never receive updates.
+- `/api/*` and `/ws` → never cached (`Cache-Control: no-store`).
+- WebSocket through the Cloudflare proxy: the idle timeout is 100 s; the client pings every 25 s.
+- Real client IP: `CF-Connecting-IP`, trustworthy only because the origin accepts nothing but Cloudflare IPs.
 
 ---
 
-## 5. Pipeline de deploy (zero downtime)
+## 5. Deploy pipeline (zero downtime)
 
 ```
-push na master
- ├─ CI: typecheck · Biome · unit/propriedade · integração (compose) · Playwright
- ├─ build em paralelo no runner ubuntu-24.04-arm → push GHCR (tag = sha)
+push to master
+ ├─ CI: typecheck · Biome · unit/property · integration (compose) · Playwright
+ ├─ parallel build on the ubuntu-24.04-arm runner → push to GHCR (tag = sha)
  │    caravan-api   caravan-web
  └─ deploy (ssh, scripts/deploy.sh <sha>)
      1. docker compose pull
-     2. docker compose run --rm api migrate         ← só migrations aditivas
-     3. rolling da API: para cada api-N
-          SIGTERM → /ready vira 503 → Caddy tira do pool
-          fecha os WS com código 1012 (Service Restart) → clientes reconectam na outra instância, sem backoff
-          drena as ops em andamento (timeout de 10 s) → sai
-          sobe a versão nova → espera /ready → próxima
-     4. rolling da web (mesmo processo, sem a parte de WS)
-     5. smoke test: GET /api/healthz + hello via WS + GET /
-     6. falhou? deploy.sh <sha anterior> (as imagens antigas ficam no host)
+     2. docker compose run --rm api migrate         ← additive migrations only
+     3. API rolling deploy: for each api-N
+          SIGTERM → /ready returns 503 → Caddy takes it out of the pool
+          closes the WS with code 1012 (Service Restart) → clients reconnect to the other instance, no backoff
+          drains in-flight ops (10 s timeout) → exits
+          starts the new version → waits for /ready → next
+     4. web rolling deploy (same process, without the WS part)
+     5. smoke test: GET /api/healthz + hello over WS + GET /
+     6. failed? deploy.sh <previous sha> (old images stay on the host)
 ```
 
-**A `master` vai direto para a prod** (só recebe merge de PR, nunca commit direto). A homologação (seção 14) é para testar uma branch antes do merge, não um degrau obrigatório.
+**`master` goes straight to production** (it only receives PR merges, never direct commits). Staging (section 14) is for testing a branch before merging, not a mandatory step.
 
-**Cada deploy exercita a reconexão de verdade.** É um chaos test que roda sozinho.
+**Every deploy exercises real reconnection.** It is a chaos test that runs by itself.
 
-**Compatibilidade de protocolo: leitor antes de escritor (P7).** O Service Worker pode manter uma versão velha rodando por dias, e durante o rolling (ou um rollback) há instâncias N e N+1 ao mesmo tempo.
-- **Tipo novo de op ou de efeito leva dois releases:** no N+1, API, web e `core` **entendem** o tipo novo, mas ninguém o emite; no N+2, ele começa a ser emitido. Assim, instâncias mistas e o rollback de 1 release são sempre seguros. Remover um tipo segue o caminho inverso (para de emitir, depois para de entender).
-- O `hello` leva `protocolVersion`, e o servidor aceita a atual e a anterior.
-  - Cliente mais velho que isso → `upgrade_required`: o SW atualiza e a página recarrega. Sem fila offline, não há pendentes a preservar (as em voo são de milissegundos).
-  - Cliente **mais novo** que o servidor (rollback) → `server_behind`: o cliente fica em só leitura e tenta de novo com backoff.
-- **Efeitos codificados por conexão:** o gateway serializa os `effects` na versão de protocolo de cada conexão. Se um efeito não tiver representação na versão do cliente, aquela conexão recebe `upgrade_required`, porque ignorar o efeito causaria divergência.
-- **Pub/sub e `ops_log` versionados:** toda mensagem em `trip:{id}` e todo `effects_json` levam `v`. O `core` exporta *upcasters* de `Mutation` (do `ops_log`) de cada versão antiga para a atual. O cache de leitura no IndexedDB não precisa de upcaster: formato incompatível é descartado e baixado de novo.
-- **Teste de compat na CI:** fixtures de mensagens e `ops_log` da versão anterior; e um teste de integração com API N e N+1 lado a lado e clientes das duas versões.
+**Protocol compatibility: reader before writer (P7).** The Service Worker can keep an old version running for days, and during a rolling deploy (or a rollback) instances N and N+1 run at the same time.
+- **A new op or effect type takes two releases:** in N+1, the API, web and `core` **understand** the new type, but nobody emits it; in N+2, it starts being emitted. That way, mixed instances and a 1-release rollback are always safe. Removing a type goes the other way (stop emitting, then stop understanding).
+- `hello` carries `protocolVersion`, and the server accepts the current and the previous one.
+  - A client older than that → `upgrade_required`: the SW updates and the page reloads. With no offline queue, there are no pending ops to preserve (in-flight ones last milliseconds).
+  - A client **newer** than the server (rollback) → `server_behind`: the client goes read-only and retries with backoff.
+- **Effects encoded per connection:** the gateway serializes the `effects` in each connection's protocol version. If an effect has no representation in the client's version, that connection gets `upgrade_required`, because ignoring the effect would cause divergence.
+- **Versioned pub/sub and `ops_log`:** every message on `trip:{id}` and every `effects_json` carries `v`. `core` exports `Mutation` *upcasters* (for the `ops_log`) from each old version to the current one. The IndexedDB read cache needs no upcaster: an incompatible format is discarded and downloaded again.
+- **Compatibility test in CI:** fixtures of the previous version's messages and `ops_log`; and an integration test with API N and N+1 side by side and clients of both versions.
 
-**Migrations em duas fases (expand/contract):** no release N, adiciona coluna nullable e o código escreve nos dois formatos; no release N+1, remove o formato antigo.
-
----
-
-## 6. Provisionamento
-
-- `infra/provision/cloud-init.yaml`: Docker, usuário `deploy` (só chave SSH, sem root), `unattended-upgrades`, swap de 2 GB, diretório `/srv/caravan`.
-- `infra/provision/tofu/` (opcional, mas recomendado para o currículo): OpenTofu com os providers `hcloud` e `cloudflare`, criando a VPS, o firewall, os registros DNS e o certificado de origem. São ~60 linhas.
-- **Projetos da Hetzner:** `caravan-prod` e `caravan-homol`, cada um com o seu token de API. O token da homol não enxerga a prod.
-- **IPs primários reservados** (`auto_delete: false`): o servidor pode ser recriado sem mudar o DNS.
-- **Segredos:** `/srv/caravan/.env` (modo 600) criado à mão uma vez; as variáveis ficam documentadas em `.env.example`. No GitHub, só a chave SSH de deploy e o token do GHCR.
+**Two-phase migrations (expand/contract):** in release N, add a nullable column and have the code write both formats; in release N+1, remove the old format.
 
 ---
 
-## 7. Desenvolvimento local
+## 6. Provisioning
 
-`docker compose -f compose.yml -f compose.dev.yml up` sobe:
-- Postgres, Redis, Caddy (`caravan.localhost`, certificado local do próprio Caddy), api ×2 e web.
-- **mailpit**: captura e-mails de convite e reset de senha.
-- **toxiproxy**, no perfil `chaos`: entre a API e o Postgres/Redis.
-
-No dia a dia, também dá para rodar só Postgres e Redis no compose e a API/web com `bun dev`, com hot reload.
+- `infra/provision/cloud-init.yaml`: Docker, a `deploy` user (SSH key only, no root), `unattended-upgrades`, 2 GB swap, the `/srv/caravan` directory.
+- `infra/provision/tofu/` (optional, but recommended for the résumé): OpenTofu with the `hcloud` and `cloudflare` providers, creating the VPS, the firewall, the DNS records and the origin certificate. About 60 lines.
+- **Hetzner projects:** `caravan-prod` and `caravan-homol`, each with its own API token. The staging token can't see production.
+- **Reserved primary IPs** (`auto_delete: false`): the server can be recreated without changing DNS.
+- **Secrets:** `/srv/caravan/.env` (mode 600), created by hand once; the variables are documented in `.env.example`. On GitHub, only the deploy SSH key and the GHCR token.
 
 ---
 
-## 8. Observabilidade (tudo no plano grátis)
+## 7. Local development
 
-| O quê | Ferramenta |
+`docker compose -f compose.yml -f compose.dev.yml up` starts:
+- Postgres, Redis, Caddy (`caravan.localhost`, with Caddy's own local certificate), api ×2 and web.
+- **mailpit**: catches invite and password reset emails.
+- **toxiproxy**, in the `chaos` profile: between the API and Postgres/Redis.
+
+Day to day, you can also run only Postgres and Redis in compose and the API/web with `bun dev`, with hot reload.
+
+---
+
+## 8. Observability (all on free tiers)
+
+| What | Tool |
 |---|---|
-| Erros (web + API) | Sentry |
-| Métricas (`/metrics`: conexões WS, ops/s, latência do pipeline, p95 do broadcast) | Grafana Alloy → Grafana Cloud |
-| Logs | stdout JSON → Alloy → Loki (Grafana Cloud) |
-| Uptime | UptimeRobot em `/api/healthz` e `/` |
+| Errors (web + API) | Sentry |
+| Metrics (`/metrics`: WS connections, ops/s, pipeline latency, broadcast p95) | Grafana Alloy → Grafana Cloud |
+| Logs | JSON stdout → Alloy → Loki (Grafana Cloud) |
+| Uptime | UptimeRobot on `/api/healthz` and `/` |
 
-Um dashboard público do Grafana pode ir no README.
-
----
-
-## 9. Testes de carga
-
-- O k6 roda de uma **VPS temporária** da Hetzner (cobrada por hora: cria, roda, destrói, custa centavos), nunca da própria VPS, senão os números saem distorcidos.
-- Os testes batem **direto na origem**: IP do k6 liberado temporariamente no firewall e `insecureSkipTLSVerify`, porque o certificado é de origem. Pelo Cloudflare, o resultado mediria a CDN e o tráfego poderia ser bloqueado como ataque.
-- Os números (conexões simultâneas, p95 do broadcast) vão para o README e para a landing.
+A public Grafana dashboard can go in the README.
 
 ---
 
-## 10. Backup e recuperação
+## 9. Load tests
 
-- `pg_dump -Fc` diário → R2, com retenção de 7 dias.
-- `scripts/restore.sh <data>`: **testado uma vez por mês** num container descartável. Backup que nunca foi restaurado não conta.
-- O Redis não tem backup, por projeto: os clientes reconstroem a presença no próximo heartbeat.
+- k6 runs from a **temporary** Hetzner VPS (billed hourly: create, run, destroy, costs cents), never from the production VPS itself, or the numbers get skewed.
+- The tests hit **the origin directly**: the k6 IP is temporarily allowed in the firewall, with `insecureSkipTLSVerify` because the certificate is an origin certificate. Through Cloudflare, the result would measure the CDN, and the traffic could be blocked as an attack.
+- The numbers (concurrent connections, broadcast p95) go into the README and the landing page.
 
 ---
 
-## 11. Custo
+## 10. Backup and recovery
 
-| Item | Custo |
+- Daily `pg_dump -Fc` → R2, with 7-day retention.
+- `scripts/restore.sh <date>`: **tested once a month** in a throwaway container. A backup that has never been restored doesn't count.
+- Redis has no backup, by design: clients rebuild presence on the next heartbeat.
+
+---
+
+## 11. Cost
+
+| Item | Cost |
 |---|---|
-| Hetzner CAX11 (prod) | ~€6,49/mês com IPv4 (CAX21: ~€10,99). Preços de outubro de 2026, depois do aumento de junho |
-| Homologação (CAX11 por hora) | centavos por mês + ~€0,50/mês do IPv4 reservado |
-| Domínio (Cloudflare Registrar) | ~US$10–15/ano |
-| Cloudflare, R2 (10 GB), GHCR, Actions (repo público), Resend, Sentry, Grafana Cloud, UptimeRobot | grátis |
+| Hetzner CAX11 (production) | ~€6.49/month with IPv4 (CAX21: ~€10.99). October 2026 prices, after the June increase |
+| Staging (CAX11 by the hour) | cents per month + ~€0.50/month for the reserved IPv4 |
+| Domain (Cloudflare Registrar) | ~US$10–15/year |
+| Cloudflare, R2 (10 GB), GHCR, Actions (public repo), Resend, Sentry, Grafana Cloud, UptimeRobot | free |
 
 ---
 
-## 12. Estrutura
+## 12. Layout
 
 ```
 infra/
-  compose.yml            serviços e redes base
-  compose.dev.yml        portas, mailpit, toxiproxy (perfil chaos), Caddy local
-  compose.prod.yml       imagens do GHCR, limites de memória, backup, certificado de origem
-  compose.homol.yml      sobre o prod: sem backup, mailpit, seed
+  compose.yml            base services and networks
+  compose.dev.yml        ports, mailpit, toxiproxy (chaos profile), local Caddy
+  compose.prod.yml       GHCR images, memory limits, backup, origin certificate
+  compose.homol.yml      on top of prod: no backup, mailpit, seed
   caddy/Caddyfile
   postgres/postgresql.conf
   scripts/               deploy.sh · backup.sh · restore.sh · smoke.sh · idle-reaper.sh
   provision/             cloud-init.yaml · tofu/
-  k6/                    cenários de carga
+  k6/                    load scenarios
 .github/workflows/
-  ci.yml                 PR e master
-  deploy.yml             master → build ARM → GHCR → deploy.sh
-  homol.yml              branch → build ARM → GHCR → cria a homol → deploy.sh
+  ci.yml                 PRs and master
+  deploy.yml             master → ARM build → GHCR → deploy.sh
+  homol.yml              branch → ARM build → GHCR → create staging → deploy.sh
 ```
 
 ---
 
-## 13. Escalando além disso (não é para o MVP)
+## 13. Scaling beyond this (not for the MVP)
 
-A arquitetura já aceita N instâncias. O caminho seria:
-1. Postgres numa VPS dedicada, na rede privada da Hetzner.
-2. API e web em 2+ VPS com um Load Balancer da Hetzner (~€6/mês).
-3. Réplica de leitura para o `welcome` com estado completo.
+The architecture already supports N instances. The path would be:
+1. Postgres on a dedicated VPS, on Hetzner's private network.
+2. API and web on 2+ VPSs behind a Hetzner Load Balancer (~€6/month).
+3. A read replica for the full-state `welcome`.
 
-Não muda nada no código.
+Nothing changes in the code.
 
 ---
 
-## 14. Homologação
+## 14. Staging
 
-**Ciclo de vida:**
+Files and names use `homol` (short for *homologação*, staging in Portuguese).
+
+**Lifecycle:**
 
 ```
-workflow_dispatch (escolhe a branch) ou label `homol` no PR
- ├─ build ARM → GHCR (o mesmo do deploy da prod)
- ├─ homol existe? não → OpenTofu cria a CAX11 no projeto caravan-homol, com o IP reservado
- ├─ deploy.sh <sha> com compose.prod.yml + compose.homol.yml
- └─ migrate + seed (a viagem do design)
+workflow_dispatch (pick the branch) or the `homol` label on the PR
+ ├─ ARM build → GHCR (the same as the production deploy)
+ ├─ does staging exist? no → OpenTofu creates the CAX11 in the caravan-homol project, with the reserved IP
+ ├─ deploy.sh <sha> with compose.prod.yml + compose.homol.yml
+ └─ migrate + seed (the trip from the design)
 
-idle-reaper (timer systemd, a cada 10 min, na própria homol)
- └─ GET /internal/idle (só localhost): sem WS aberto nem request há mais de 1h?
-     └─ sim → DELETE /servers/{id} na API da Hetzner (o IP reservado fica)
+idle-reaper (systemd timer, every 10 min, on staging itself)
+ └─ GET /internal/idle (localhost only): no open WS and no request for more than 1h?
+     └─ yes → DELETE /servers/{id} on the Hetzner API (the reserved IP stays)
 ```
 
-- **Mesmas imagens e mesmo `deploy.sh` da prod:** o que passa na homol é o que vai para a prod. Ela roda api ×2 para ensaiar o rolling e a compatibilidade da P7.
-- **Banco descartável:** cada criação começa do seed. Nada da homol precisa sobreviver a ela.
-- **E-mails vão para o mailpit**, nunca para fora.
-- **Acesso fechado:** `homol.caravan.x` atrás do Cloudflare Access (grátis até 50 usuários). Os buscadores não indexam e ninguém de fora cai nela por acaso.
-- **Depois (v1.x): acordar ao acessar.** Um Cloudflare Worker em `homol.caravan.x` cria o servidor pela API da Hetzner quando ele não existe e mostra "Ligando a homol…" até o `/ready` responder (~2 min).
-
+- **Same images and same `deploy.sh` as production:** what passes on staging is what goes to production. It runs api ×2 to rehearse the rolling deploy and P7 compatibility.
+- **Throwaway database:** each creation starts from the seed. Nothing on staging has to outlive it.
+- **Emails go to mailpit**, never outside.
+- **Closed access:** `homol.caravan.x` behind Cloudflare Access (free up to 50 users). Search engines don't index it, and nobody outside stumbles onto it.
+- **Later (v1.x): wake on access.** A Cloudflare Worker on `homol.caravan.x` creates the server through the Hetzner API when it doesn't exist and shows "Starting staging…" until `/ready` answers (~2 min).
