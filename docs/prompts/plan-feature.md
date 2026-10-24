@@ -4,6 +4,8 @@ Quero planejar a seguinte feature:
 
 Antes de propor uma solução, consulte as instruções aplicáveis do repositório, incluindo `AGENTS.md`, `docs/project/development.md`, `docs/project/planner.md` e a documentação arquitetural relevante. Consulte também a skill TDD quando aplicável.
 
+Importante: Salve o planejamento em docs/planners/[dir] em pt-br
+
 ## Objetivo
 
 Transforme minha ideia em um plano de implementação claro, coerente com a arquitetura existente e dividido em etapas pequenas e verificáveis.
