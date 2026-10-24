@@ -36,6 +36,7 @@ Tool versions come from `mise.toml` (`mise install`). Bun's version is also in t
 - `bun run infra:up`: start Postgres (`127.0.0.1:5433`) and Redis (`127.0.0.1:6380`) with Docker Compose and wait until they are healthy. Credentials `caravan`/`caravan`, database `caravan`. Ports and credentials can be overridden in `infra/.env` (see `infra/.env.example`).
 - `bun run infra:check`: check that the running Postgres and Redis match `docs/project/deploy.md` §3. CI runs it too.
 - `bun run infra:down`: stop them, keeping the Postgres data. `bun run infra:reset`: stop them and delete the data.
-- The API reads `DATABASE_URL` (required, with no default) and `PORT` (default 3000) from `apps/api/.env`: copy `apps/api/.env.example` once. The API tests also need `bun run infra:up`; they create `caravan_test` next to the dev database and drop it after each test file.
+- The API reads `DATABASE_URL`, `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` (required, with no default) and `PORT` (default 3000) from `apps/api/.env`: copy `apps/api/.env.example` once. The API tests also need `bun run infra:up`; they create `caravan_test` next to the dev database, apply the migrations, and drop it after each test file.
 - `bun run --filter @caravan/api dev`: start the API with hot reload. `GET /healthz` and `GET /ready` answer on `localhost:3000`.
-- `bun run --filter @caravan/api db:generate`: write a migration from the Drizzle schema in `apps/api/src/db/schema/`. Each feature adds its own tables and migration; there are none yet.
+- `bun run --filter @caravan/api db:generate --name <name>`: write a migration from the Drizzle schema in `apps/api/src/db/schema/`. Each feature adds its own tables and migration. Migrations are additive; one that drops, renames or tightens something is named `contract_<reason>` (`deploy.md` P11), or the tests fail.
+- `bun run --filter @caravan/api db:migrate`: apply the pending migrations to `DATABASE_URL`.
