@@ -1,7 +1,7 @@
 # Caravan — Pendências
 
 > Lista única do que falta decidir, conferir ou arrumar.
-> As decisões já tomadas estão em [`architecture.md`](./architecture.md) §0 e em [`deploy.md`](./deploy.md) §0; o vocabulário, em [`CONTEXT.md`](../CONTEXT.md).
+> As decisões já tomadas estão em [`architecture.md`](./architecture.md) §0 e em [`deploy.md`](./deploy.md) §0; o vocabulário, em [`CONTEXT.md`](../../CONTEXT.md).
 > Não há cronograma: cada item diz **o que ele bloqueia**. Quando um item for decidido, ele sai daqui e vira uma linha no §0 do documento certo. Os números são fixos: o de um item decidido não é reaproveitado.
 > Última revisão: 2026-10-24.
 
