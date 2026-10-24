@@ -13,7 +13,6 @@
 |---|---|---|---|
 | **A. Antes do primeiro código** ||||
 | 2 | Datas da viagem × datas dos stops | Schema de `trips`, NewTrip | 🔴 |
-| 4 | Driver do Postgres e pool de conexões | Setup do Drizzle | 🔴 |
 | 6 | Membros e convites: REST antes do pipeline de ops | REST de membros/convites | 🟠 |
 | 7 | Stack da web (UI, versões, testes) | `apps/web` | 🟠 |
 | 22 | Criptografia do Bun: escopo | Setup do auth e do WS | 🟡 |
@@ -50,16 +49,6 @@
 - **B) Manter as datas próprias da viagem** e aceitar a assimetria (cada op valida só o que muda).
 
 **Recomendação para começar:** A, se o fluxo do NewTrip e o EmptyTrip aguentarem a mudança. Some uma regra e um tipo de aviso.
-
-### 4. Driver do Postgres e pool de conexões 🔴
-
-**Por que importa:** é a configuração do Drizzle no primeiro dia. Cada op segura uma conexão enquanto tem o lock da viagem; com `max_connections=50`, 2 instâncias, migrations e backup, o tamanho do pool define o teto de ops simultâneas.
-
-**O que decidir:**
-- Driver: `Bun.sql` (nativo) ou `postgres.js`. Os dois funcionam com o Drizzle.
-- Pool por instância (por exemplo, 15 cada) e o que acontece quando ele esgota: rejeição transitória "servidor ocupado" (já prevista no §6).
-
-**Recomendação para começar:** `Bun.sql`, se o Drizzle suportar bem as transações com `FOR UPDATE`. Se não, `postgres.js`. Validar com um teste de transação logo no setup.
 
 ### 6. Membros e convites: REST antes do pipeline de ops 🟠
 
