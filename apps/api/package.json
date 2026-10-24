@@ -1,0 +1,13 @@
+{
+	"name": "@caravan/api",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"lint": "biome ci .",
+		"typecheck": "tsc -p tsconfig.json && tsc -p __tests__/tsconfig.json",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"elysia": "1.4.30"
+	}
+}
