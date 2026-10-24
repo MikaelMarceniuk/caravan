@@ -14,7 +14,6 @@
 | **A. Antes do primeiro código** ||||
 | 2 | Datas da viagem × datas dos stops | Schema de `trips`, NewTrip | 🔴 |
 | 6 | Membros e convites: REST antes do pipeline de ops | REST de membros/convites | 🟠 |
-| 7 | Stack da web (UI, versões, testes) | `apps/web` | 🟠 |
 | 22 | Criptografia do Bun: escopo | Setup do auth e do WS | 🟡 |
 | **B. Modelo de domínio** ||||
 | 8 | Mapa: como fazer a rota | Mapa (v2) | 🟢 |
@@ -60,16 +59,6 @@
 - **C)** Adiantar um pipeline mínimo.
 
 **Recomendação para começar:** A. Nada é escrito duas vezes.
-
-### 7. Stack da web 🟠
-
-**Por que importa:** nenhum doc define a camada de UI, e o shadcn já está nas skills do repo (`.agents/skills/shadcn`).
-
-**O que decidir:**
-- Tailwind + shadcn/ui (e como os `tokens` alimentam o tema).
-- Versão do Next.js.
-- Testes de componentes React: `bun test` + Testing Library ou Vitest.
-- Fixar o Node no `mise.toml` (a web roda em Node 22 na produção; hoje só o Bun está fixado).
 
 ### 22. Criptografia do Bun: escopo 🟡
 

@@ -49,7 +49,7 @@ Browser ──HTTPS/WSS──► Cloudflare (proxy, cache de /_next/static/*)
       │   /api/*, /ws  → api-1, api-2   (least_conn, /ready a cada 5s)│
       │   /*           → web-1, web-2   (round_robin, /healthz)      │
       │ api-1, api-2   Bun · binário compilado                       │
-      │ web-1, web-2   Next.js standalone (Node 22)                  │
+      │ web-1, web-2   Next.js standalone (Node 24)                  │
       │ postgres 18    volume local                                  │
       │ redis 8        sem persistência                              │
       │ backup         cron: pg_dump → Cloudflare R2                 │
@@ -75,7 +75,7 @@ Só o Caddy está na rede `edge`. Postgres e Redis ficam na rede interna, **sem 
 |---|---|---|---|
 | caddy | `caddy:2` | 64 MB | Certificado de origem do Cloudflare em arquivo (15 anos, sem ACME) |
 | api-1/2 | `ghcr.io/<user>/caravan-api:<sha>` | 256 MB cada | `bun build --compile` sobre `distroless/base-nossl`; graceful shutdown (seção 5) |
-| web-1/2 | `ghcr.io/<user>/caravan-web:<sha>` | 256 MB cada | `output: "standalone"` sobre `node:22-slim` |
+| web-1/2 | `ghcr.io/<user>/caravan-web:<sha>` | 256 MB cada | `output: "standalone"` sobre `node:24-slim` |
 | postgres | `postgres:18` | 1 GB | `shared_buffers=256MB`, `effective_cache_size=1GB`, `max_connections=50`. Na CAX21: 2 GB, `shared_buffers=1GB`, `effective_cache_size=4GB` |
 | redis | `redis:8` | 300 MB | `maxmemory 256mb`, `save ""`, `appendonly no` (presença, pub/sub, cache e rate limit são efêmeros) |
 | backup | imagem pequena com `pg_dump` + `rclone` | 128 MB | Diário, retenção de 7 dias no R2 |

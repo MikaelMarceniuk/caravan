@@ -39,6 +39,7 @@
 | D28 | **IDs em UUIDv7, coluna `uuid`**: o que nasce no cliente (stops, atividades, `opId`) usa `newId()` do `core` (lib `uuid`, `v7()`); o que o servidor cria (usuários, viagens, convites por e-mail) usa `DEFAULT uuidv7()` do Postgres. O servidor valida todo ID vindo do cliente (seção 18) | O `opId` tem de nascer no cliente para o reenvio ser idempotente (D16), e o ID da entidade, para a UI otimista não precisar trocar IDs temporários. Uma função só no navegador, no Bun e no RN; o v7 é ordenado no tempo, então os INSERTs vão para o fim do índice |
 | D29 | **Validação com Zod 4 em tudo**: os schemas moram no `core` e valem para as ops e mensagens do WS, para as rotas REST do Elysia (via Standard Schema, com o Eden inferindo os tipos) e para os clientes. Sem o `t` (TypeBox) do Elysia | Uma biblioteca só, legível para quem lê o repo. O Zod não gera código com `new Function`, então roda igual no Bun, no navegador com CSP rígida e no React Native. A vantagem de velocidade do TypeBox são microssegundos antes do lock, contra milissegundos da transação. Se o microbenchmark do M2 mostrar custo nos cursores, só essa mensagem ganha uma checagem à mão. A conferir no setup da API (M1): o Eden infere os tipos e o OpenAPI sai certo com Zod; se não, o REST volta para o `t` |
 | D30 | **Driver `Bun.sql`** no Drizzle, **pool de 10 conexões por instância** da API; a op espera **até 2 s** por uma conexão livre e depois recebe `busy` (transitória); **timeout de 5 s** por transação no Postgres. Depende do spike do M1; plano B: `postgres.js` | Só a API (Bun) acessa o banco, então o driver nativo não tem problema de compatibilidade e não soma dependência. Com ~1–2 ms por op, 10 conexões passam de milhares de ops/s; 2 × 10 + migrations + backup + reserva do Postgres ≈ 26 de `max_connections=50`, e pool maior só gasta memória e disputa as 2 vCPUs. O timeout impede que uma transação travada segure o lock da viagem. A API do `Bun.sql` segue a do `postgres.js` e o Drizzle esconde o driver, então trocar é barato |
+| D31 | **Stack da web**: Next.js 16 (Active LTS, versão exata fixada); Tailwind 4 + shadcn/ui sobre **Radix**; `packages/tokens` em TS gera o CSS do tema; testes de componente com **`bun test` + Testing Library + happy-dom**; Node 24 (`mise.toml` local, `node:24-slim` na prod) | O Next 16 é a versão com suporte ativo (o 15 sai da manutenção em out/2026). O shadcn copia os componentes para o repo e o Radix dá a acessibilidade (teclado, foco, leitor de tela). Os `tokens` em TS são uma fonte só para a web e o RN, e o teste de contraste AA roda neles. Um executor de testes no repo inteiro, com o mesmo comando local e no GitHub Actions; o que precisa de navegador real fica no Playwright. O Node 22 sai da manutenção em abr/2027 |
 
 ---
 
@@ -343,8 +344,9 @@ op_receipts    (op_id PK, trip_id, user_id, outcome, version, reason, created_at
 
 ## 12. Web (Next.js)
 
+- **UI:** Tailwind 4 + shadcn/ui sobre Radix (D31). Um script gera de `packages/tokens` as variáveis CSS que o tema do shadcn lê.
 - **Rotas públicas** (landing, sign in/up, join) com SSR. **App** (`/trips`, `/t/:id/...`) como client components sobre o `sync`.
-- **Offline só leitura (D23):** Service Worker com **Serwist** (precache do shell + rotas do app) e o `confirmed` de cada viagem em cache no IndexedDB. Sem conexão, a UI abre o plano e a busca, mas desabilita a edição. Ainda é o maior risco técnico da web: validar cedo (M1) com uma página "hello offline".
+- **Offline só leitura (D23):** Service Worker com **Serwist** (`@serwist/turbopack`, porque o Next 16 faz o build com Turbopack; precache do shell + rotas do app) e o `confirmed` de cada viagem em cache no IndexedDB. Sem conexão, a UI abre o plano e a busca, mas desabilita a edição. Ainda é o maior risco técnico da web: validar cedo (M1) com uma página "hello offline".
 - **Toda regra de negócio passa pela API.** Nada de Server Actions/route handlers com lógica de domínio, senão o mobile não reaproveita.
 - **REST** com cliente **Eden** (tipos inferidos do Elysia) + TanStack Query para lista de viagens, convites e membros.
 - Drag & drop: dnd-kit. Busca ⌘K: índice em memória sobre o estado local (funciona offline). "New places from the map need a connection."
@@ -375,6 +377,7 @@ apps/api/src/
 | Nível | O quê | Ferramenta |
 |---|---|---|
 | Unit | `decide` de cada op, invariantes, ordenação | bun test |
+| Componente | componentes React da web, buscando por role e label | bun test + Testing Library + happy-dom |
 | Propriedade | N clientes simulados, ops aleatórias, entrega em ordem aleatória, quedas e reenvios → **todos convergem** para o estado do servidor (hash); nenhuma op perdida ou duplicada; mesma resposta para o mesmo `opId` | bun test + fast-check |
 | Integração | API real + Postgres + Redis; N clientes WS concorrentes em 2 instâncias; exclusividade do lock de edição entre instâncias, inclusive com o Redis parado | bun test + compose |
 | Chaos | derrubar instância, Redis e rede (latência, corte) no meio de edições → nenhuma op confirmada se perde; com o Redis fora, duas pessoas continuam sem conseguir editar a mesma coisa | toxiproxy |

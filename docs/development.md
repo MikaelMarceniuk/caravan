@@ -42,7 +42,7 @@
 
 ### Em aberto
 
-- Ferramentas de verificação automática (ex.: `@axe-core/playwright` no E2E, axe nos testes de componente). Depende do item 7 do [`open-topics.md`](./open-topics.md).
+- Ferramentas de verificação automática (ex.: `@axe-core/playwright` no E2E, `axe-core` nos testes de componente com happy-dom). Conferir no setup da web o que o axe consegue checar sem navegador real.
 - Os breakpoints viram tokens do tema ou ficam os padrões da lib de UI?
 
 ---
@@ -75,7 +75,7 @@
 | `packages/core` | `decide()` e as mutations de cada op | Funções puras: entrada → saída, sem mock |
 | `packages/sync` | API pública do pacote | Portas `Transport`/`Storage`/`Clock` com fakes |
 | `apps/api` | WS e REST | API real + Postgres + Redis do compose |
-| `apps/web` | O que o usuário vê | Testing Library buscando por role e label (o que também cobra a acessibilidade) |
+| `apps/web` | O que o usuário vê | `bun test` + Testing Library + happy-dom, buscando por role e label (o que também cobra a acessibilidade) |
 | Fluxos | Navegador | Playwright |
 
 Os níveis (unit, propriedade, integração, chaos, E2E, carga) e as ferramentas estão em [`architecture.md`](./architecture.md) §14.
@@ -95,4 +95,3 @@ Os níveis (unit, propriedade, integração, chaos, E2E, carga) e as ferramentas
 - Onde ficam os testes: ao lado do código (`*.test.ts`) ou em `tests/`?
 - Nome dos testes em inglês (como o código) ou português?
 - Cobertura mínima na CI, ou só "todos os testes passam"?
-- Runner dos testes de componente React (item 7 do [`open-topics.md`](./open-topics.md)).
