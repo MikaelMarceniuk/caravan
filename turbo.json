@@ -8,13 +8,20 @@
 				"__tests__/**",
 				"package.json",
 				"tsconfig*.json",
-				"biome.json"
+				"biome.json",
+				"drizzle.config.ts"
 			],
 			"outputs": []
 		},
 		"typecheck": {
 			"dependsOn": ["^typecheck"],
-			"inputs": ["src/**", "__tests__/**", "package.json", "tsconfig*.json"],
+			"inputs": [
+				"src/**",
+				"__tests__/**",
+				"package.json",
+				"tsconfig*.json",
+				"drizzle.config.ts"
+			],
 			"outputs": []
 		},
 		"build": {
@@ -24,7 +31,14 @@
 		},
 		"test": {
 			"dependsOn": ["typecheck"],
-			"inputs": ["src/**", "__tests__/**", "package.json", "tsconfig*.json"],
+			"inputs": [
+				"src/**",
+				"__tests__/**",
+				"package.json",
+				"tsconfig*.json",
+				"drizzle.config.ts"
+			],
+			"env": ["DATABASE_URL"],
 			"outputs": []
 		}
 	}

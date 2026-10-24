@@ -84,6 +84,7 @@ Only Caddy is on the `edge` network. Postgres and Redis live on the internal net
 
 **Health checks:**
 - `api`: `/healthz` (process alive) and `/ready` (Postgres and Redis answering; returns 503 during shutdown).
+  - Today (M1), `/ready` checks only Postgres. Redis joins it with the first code that uses Redis, and the 503 during shutdown comes with the graceful shutdown.
 - `web`: `/healthz`.
 
 ---
