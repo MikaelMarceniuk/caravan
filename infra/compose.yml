@@ -24,6 +24,8 @@ services:
 
   redis:
     image: redis:8.10.2
+    # Presence, pub/sub, cache and rate limiting are ephemeral: no persistence.
+    command: ["redis-server", "--maxmemory", "256mb", "--save", "", "--appendonly", "no"]
     networks: [backend]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
