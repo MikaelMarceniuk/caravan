@@ -14,6 +14,7 @@
 | P3 | **Caddy** como proxy/LB | TLS, LB com health check ativo e WS em poucas linhas; binário único |
 | P4 | **Cloudflare** (DNS + proxy + Registrar) | DDoS, cache dos assets estáticos, certificado de origem grátis |
 | P5 | **ARM ponta a ponta** | Máquina de dev aarch64, runner ARM grátis no GitHub, Hetzner ARM mais barata; sem emulação |
+| P9 | **Repositório público** no GitHub | É vitrine de portfólio, e o runner ARM e o Actions só são grátis em repo público. Segredos nunca entram no repo (seção 6) |
 | P6 | **Homologação sob demanda** numa CAX11 separada, criada para uma branch e apagada sozinha depois de 1h sem uso (seção 14) | A Hetzner cobra servidor desligado, então economizar exige apagar. A homol testa o que o compose local não testa: celular real (SW exige HTTPS), Cloudflare/Caddy/WS reais e o rolling da P7 |
 | P7 | **Protocolo "leitor antes de escritor"** (expand/contract também para ops e efeitos) | Rolling com instâncias mistas e rollback automático sem divergência (seção 5) |
 | P8 | **Dual-stack: IPv4 + IPv6** (IPv4 a ~€0,50/mês por servidor) | IPv6-only quebra a saída para serviços sem IPv6 (GitHub/GHCR, Grafana Cloud, Photon) e o SSH vindo dos runners do GitHub, que não têm IPv6 |
