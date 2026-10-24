@@ -1,0 +1,13 @@
+{
+	"name": "@caravan/core",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"lint": "biome ci .",
+		"typecheck": "tsc -p tsconfig.json && tsc -p __tests__/tsconfig.json",
+		"test": "bun test"
+	}
+}

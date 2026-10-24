@@ -18,6 +18,7 @@
 | P7 | **"Reader before writer" protocol** (expand/contract for ops and effects too) | Rolling deploys with mixed instances and automatic rollback without divergence (section 5) |
 | P8 | **Dual stack: IPv4 + IPv6** (IPv4 at ~€0.50/month per server) | IPv6-only breaks outbound traffic to services without IPv6 (GitHub/GHCR, Grafana Cloud, Photon) and SSH from GitHub runners, which have no IPv6 |
 | P9 | **Public repository** on GitHub | It is a portfolio showcase, and the ARM runner and Actions are only free for public repos. Secrets never go into the repo (section 6) |
+| P10 | **CI split by area, with one summary check**: `ci.yml` has a job per area (`packages` today; `api`, `web` and `mobile` when they exist) that runs only when the area is affected: its `src/`, `__tests__/` or config changed, or one of its dependencies did (Turborepo's graph). Root config and the CI itself affect every area, and a push to `master` runs everything. A final `ci` job is the only required check | Unaffected areas cost nothing. With path filters at the workflow level, a PR that touches no code would leave the required check pending forever; the summary job always reports |
 
 **Alternative considered:** Oracle Cloud Always Free (A1: 2 OCPU / 12 GB, €0). Rejected because of the risks of idle instance reclamation, lack of capacity in the region and account termination. Hetzner costs ~€6.49/month and is predictable. Provisioning as code (section 6) keeps migrating cheap in both directions.
 
@@ -209,7 +210,7 @@ infra/
   provision/             cloud-init.yaml · tofu/
   k6/                    load scenarios
 .github/workflows/
-  ci.yml                 PRs and master
+  ci.yml                 PRs and master: a job per affected area + the `ci` summary check (P10)
   deploy.yml             master → ARM build → GHCR → deploy.sh
   homol.yml              branch → ARM build → GHCR → create staging → deploy.sh
 ```

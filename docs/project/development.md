@@ -104,6 +104,7 @@ The levels (unit, property, integration, chaos, E2E, load) and their tools are i
 ### Where tests live
 
 - One `__tests__/` directory per package or app, mirroring `src/`: `packages/core/src/stops/stop.ts` → `packages/core/__tests__/stops/stop.test.ts`.
+- Test files are named `*.test.ts` (or `*.test.tsx` for components).
 
 ### Mocks
 
@@ -145,9 +146,9 @@ An exception only waives writing the test first. It never turns a test that did 
 
 Before changing the behavior of legacy code, write a characterization test that captures the relevant current behavior, when feasible, then follow the normal cycle for the change. When a characterization test is not feasible, the change is a TDD policy exception.
 
-### Open
+### Coverage
 
-- Minimum coverage in CI, or just "all tests pass"? Decide when setting up the tests. TDD is mandatory either way.
+CI requires every test to pass, with no minimum coverage threshold (decided in M1). TDD is mandatory either way.
 
 ---
 
@@ -172,6 +173,7 @@ Before changing the behavior of legacy code, write a characterization test that 
 |---|---|
 | Code, test names, commits, PRs | en-US |
 | Project, feature and bugfix docs | en-US |
+| Implementation plans (`docs/planners/`) | pt-BR or en-US |
 | README (for recruiters) | en-US (`README.md`) and pt-BR (`README.pt-BR.md`), linked to each other and updated in the same PR |
 | Interface | pt-BR and en-US (D34) |
 
@@ -183,6 +185,7 @@ docs/
   design/      design screens
   features/    one doc per feature, named after the branch (feat/stop-overlap → stop-overlap.md)
   bugfix/      one doc per bugfix, named after the branch (fix/lock-renewal → lock-renewal.md)
+  planners/    implementation plans per milestone, written before the code (m1-foundation/1.monorepo.md)
 CONTEXT.md     domain glossary
 README.md      showcase in en-US, linking to README.pt-BR.md
 ```
