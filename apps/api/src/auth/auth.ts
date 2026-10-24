@@ -4,6 +4,7 @@ import { APIError } from 'better-auth/api'
 import type { Database } from '../db/client'
 import * as schema from '../db/schema'
 import type { EmailMessage, Mailer } from '../email/mailer'
+import { createSendLimit } from '../email/send-limit'
 import {
 	type Locale,
 	resetPasswordEmail,
@@ -37,9 +38,24 @@ export type AuthOptions = {
 
 type Traveler = { email: string; name: string; locale?: unknown }
 
+// Verification and reset emails together, per address (plan B4).
+const EMAILS_PER_ADDRESS = 3
+const EMAIL_WINDOW_MS = 60 * 60 * 1000
+
 export function createAuth({ db, secret, baseURL, mailer }: AuthOptions) {
+	const sendLimit = createSendLimit({
+		max: EMAILS_PER_ADDRESS,
+		windowMs: EMAIL_WINDOW_MS,
+		now: Date.now,
+	})
+
 	// Not awaited: how long the provider takes must not tell whether an account exists (Better Auth's advice).
+	// Over the limit, nothing is sent and the answer stays the same.
 	function send(kind: string, message: EmailMessage) {
+		if (!sendLimit.allow(message.to)) {
+			console.warn(`Skipped a ${kind} email: the address reached its limit.`)
+			return
+		}
 		void mailer.send(message).catch((error: unknown) => {
 			// The kind and the error only: never the address, the body or the link.
 			console.error(`Failed to send the ${kind} email:`, error)
