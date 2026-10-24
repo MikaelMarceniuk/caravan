@@ -7,11 +7,32 @@ export const BASE_URL = 'http://localhost:3001'
 const SECRET = 'test-secret-that-is-at-least-32-characters-long'
 
 /** The real app with a Better Auth instance of its own, so in-memory state (rate limits) never leaks between tests. */
-export function createTestApp(db: Database) {
+export function createTestApp(db: Database, { baseURL = BASE_URL } = {}) {
 	return createApp({
 		db,
-		auth: createAuth({ db, secret: SECRET, baseURL: BASE_URL }),
+		auth: createAuth({ db, secret: SECRET, baseURL }),
 	})
+}
+
+/** The `name=value` pair of the session cookie a response set, ready for a `cookie` header. */
+export function sessionCookie(response: Response) {
+	const cookie = response.headers
+		.getSetCookie()
+		.find((header) => header.includes('session_token='))
+	if (!cookie) throw new Error('The response set no session cookie.')
+	return cookie.split(';')[0] as string
+}
+
+export function getAuth(
+	app: ReturnType<typeof createApp>,
+	path: string,
+	headers: Record<string, string> = {},
+) {
+	return app.handle(
+		new Request(`${BASE_URL}/api/auth${path}`, {
+			headers: { origin: BASE_URL, ...headers },
+		}),
+	)
 }
 
 /** A different address per test, so tests in the same file never share an account. */
@@ -21,7 +42,7 @@ export function uniqueEmail() {
 
 export const PASSWORD = 'a-long-password'
 
-/** Creates an account through the API and returns its email. */
+/** Creates an account through the API and returns its email and the response. */
 export async function signUp(
 	app: ReturnType<typeof createApp>,
 	{ email = uniqueEmail(), locale }: { email?: string; locale?: string } = {},
@@ -33,7 +54,7 @@ export async function signUp(
 		locale,
 	})
 	if (!response.ok) throw new Error(`Sign-up failed: ${response.status}`)
-	return email
+	return { email, response }
 }
 
 export function postAuth(

@@ -13,7 +13,7 @@ describe('POST /api/auth/sign-in/email', () => {
 
 	test('signs the traveler in with the right email and password', async () => {
 		const app = createTestApp(database.db)
-		const email = await signUp(app)
+		const { email } = await signUp(app)
 
 		const response = await postAuth(app, '/sign-in/email', {
 			email,
@@ -28,7 +28,7 @@ describe('POST /api/auth/sign-in/email', () => {
 
 	test('answers a wrong password and an unknown email the same way', async () => {
 		const app = createTestApp(database.db)
-		const email = await signUp(app)
+		const { email } = await signUp(app)
 
 		const wrongPassword = await postAuth(app, '/sign-in/email', {
 			email,
@@ -50,7 +50,7 @@ describe('POST /api/auth/sign-in/email', () => {
 
 	test('ignores the case of the email', async () => {
 		const app = createTestApp(database.db)
-		const email = await signUp(app)
+		const { email } = await signUp(app)
 
 		const response = await postAuth(app, '/sign-in/email', {
 			email: email.toUpperCase(),
