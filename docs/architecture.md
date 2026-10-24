@@ -42,6 +42,7 @@
 | D31 | **Stack da web**: Next.js 16 (Active LTS, versão exata fixada); Tailwind 4 + shadcn/ui sobre **Radix**; `packages/tokens` em TS gera o CSS do tema; testes de componente com **`bun test` + Testing Library + happy-dom**; Node 24 (`mise.toml` local, `node:24-slim` na prod) | O Next 16 é a versão com suporte ativo (o 15 sai da manutenção em out/2026). O shadcn copia os componentes para o repo e o Radix dá a acessibilidade (teclado, foco, leitor de tela). Os `tokens` em TS são uma fonte só para a web e o RN, e o teste de contraste AA roda neles. Um executor de testes no repo inteiro, com o mesmo comando local e no GitHub Actions; o que precisa de navegador real fica no Playwright. O Node 22 sai da manutenção em abr/2027 |
 | D32 | **Criptografia do Bun**: senha com **argon2id** do `Bun.password` (19 MiB, 2 iterações) plugado no Better Auth (`emailAndPassword.password.hash/verify`); ticket do WS assinado com **HMAC-SHA256** (`Bun.CryptoHasher`, segredo no `.env`, comparação em tempo constante); token de convite gerado com `crypto.getRandomValues` e guardado puro | argon2id é a primeira recomendação do OWASP, e trocar antes do primeiro usuário evita refazer hashes. O padrão do Bun (64 MiB por hash) derrubaria o container de 256 MB com 4 logins simultâneos; 19 MiB/2 é o mínimo do OWASP. O ticket assinado é conferido por qualquer instância sem consultar nada, então o WS aceita conexões com o Redis fora (como na D24); reusar o ticket dentro dos 60 s é aceitável com HTTPS. O token de convite fica puro porque o Invite mostra o link o tempo todo ("Copy link") |
 | D33 | **Membros e convites só junto com o pipeline (M4)**: a fundação (M1) faz só criar e listar viagens; aceitar convite, sair e trocar papel nascem como ops de sistema (D18). Até lá, testes com vários usuários e o seed de desenvolvimento criam os membros direto no banco | Nada é escrito duas vezes, e membros nunca existem fora da ordem das versões. O M2 ("duas abas editando stops juntas") funciona com um usuário só |
+| D34 | **Interface em pt-BR e en-US** desde a primeira tela, com `next-intl` na web. O servidor nunca manda texto pronto, só códigos (`reject { reason: "stop_overlap" }`), e cada cliente traduz. E-mails (convite, reset de senha) saem no idioma de quem recebe | Traduzir depois obrigaria a caçar strings em todas as telas. Com códigos no protocolo, a web e o Android traduzem do seu jeito, e a API não precisa saber o idioma de cada conexão |
 
 ---
 
@@ -478,7 +479,7 @@ Checklist para não fechar portas agora:
 - Respeitar `prefers-reduced-motion` nas animações de cards remotos.
 
 **Interface**
-- Interface em inglês; datas e horas formatadas pelo locale (`Intl`).
+- Interface em pt-BR e en-US (D34); datas e horas formatadas pelo locale (`Intl`).
 - Só tema escuro no MVP; os `tokens` já nascem com estrutura para o claro.
 - Avatar: foto do Google quando houver; senão, iniciais com a cor do membro.
 - **Responsiva completa** (celular e desktop), com drag por toque. Os componentes são pensados mobile-first, o que também adianta o Android.

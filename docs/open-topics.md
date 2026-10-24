@@ -25,6 +25,7 @@
 | 15 | Empurrar ou só preencher ao adicionar stop | UI da Overview | 🟡 |
 | 16 | Onde mora o feed "All activity" | UI do status | 🟡 |
 | 17 | Papel *viewer* (só leitura) | Nada (v2) | 🟢 |
+| 23 | Idioma da interface: na URL ou em cookie | Setup do `next-intl` | 🟠 |
 | **D. Validação técnica** ||||
 | 18 | Spike do Service Worker: critério de sucesso | Offline só leitura | 🔴 |
 | 19 | Mensagens fora de ordem: tempos e plano de teste | `packages/sync` | 🟠 |
@@ -140,6 +141,17 @@ Escolhidos sem conversa (`architecture.md` §7). Confirmar ou trocar:
 
 Não muda a arquitetura (o papel já é conferido na transação). É uma questão de produto: alguém da família só acompanha o roteiro? Está na v2 do roadmap.
 
+### 23. Idioma da interface: na URL ou em cookie 🟠
+
+**Por que importa:** a interface tem pt-BR e en-US (D34), e o `next-intl` precisa saber onde o idioma mora antes da primeira tela.
+
+**Opções:**
+- **Prefixo na URL** (`/pt-BR/trips`): bom para SEO da landing, mas os links compartilhados (convite, `/t/:id`) passam a carregar um idioma.
+- **Cookie / preferência do usuário** (URL sem idioma): links iguais para todo mundo e um precache mais simples no Service Worker, mas a landing tem uma URL só para os dois idiomas.
+- **Misto:** prefixo só nas páginas públicas (landing) e cookie no app.
+
+**A conversar:** o idioma padrão (do `Accept-Language`, com en-US de reserva) e onde a preferência fica salva (no usuário, para os e-mails saírem no idioma certo).
+
 ---
 
 ## D. Validação técnica
@@ -199,7 +211,6 @@ Mecânicas; dá para fazer num commit só.
 - [ ] Resend: só envia para qualquer e-mail depois de verificar o domínio. No local, o mailpit cobre.
 - [ ] Cliente OAuth do Google e Sign in with Apple (quando entrarem; a Apple exige a conta de desenvolvedor paga).
 - [ ] `LICENSE`.
-- [ ] Convenções: formato de commit, estratégia de branch e template de PR (com o checklist do item 20), num `AGENTS.md`/`CLAUDE.md` curto.
 
 ---
 
