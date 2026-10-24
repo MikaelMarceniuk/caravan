@@ -1,23 +1,27 @@
 #!/usr/bin/env bash
-# Decides which CI areas run (docs/planners/m1-foundation/1.monorepo.md, decision 12).
+# Decides which CI areas run (docs/planners/m1-foundation/1.monorepo.md, decision 12,
+# and docs/planners/m1-foundation/2.docker-compose.md, decision P6).
 # Writes one `<area>=true|false` line per area to $GITHUB_OUTPUT, or to stdout when run locally.
 set -euo pipefail
 
 # Area name → path prefix of its workspaces. `api`, `web` and `mobile` join when their apps exist.
 declare -A areas=([packages]=packages/)
+# Area name → path regex, for areas that are not workspaces.
+declare -A path_areas=([infra]='^infra/')
 
 out="${GITHUB_OUTPUT:-/dev/stdout}"
 run_all=false
 affected=''
+changed=''
 
 if [[ "${GITHUB_EVENT_NAME:-}" != pull_request ]]; then
 	# A push to master runs everything: it is what goes to production.
 	run_all=true
 else
 	base="origin/${GITHUB_BASE_REF:?}"
+	changed=$(git diff --name-only "$base...HEAD")
 	# Root configuration and the CI itself affect every area.
-	if git diff --name-only "$base...HEAD" |
-		grep -qE '^(\.github/(workflows|scripts)/|package\.json$|bun\.lock$|bunfig\.toml$|turbo\.json$|tsconfig\.base\.json$|biome\.json$|mise\.toml$)'; then
+	if grep -qE '^(\.github/(workflows|scripts)/|package\.json$|bun\.lock$|bunfig\.toml$|turbo\.json$|tsconfig\.base\.json$|biome\.json$|mise\.toml$)' <<<"$changed"; then
 		run_all=true
 	else
 		# Turbo includes the dependents of every changed workspace.
@@ -27,6 +31,14 @@ fi
 
 for area in "${!areas[@]}"; do
 	if [[ $run_all == true ]] || grep -q "^${areas[$area]}" <<<"$affected"; then
+		echo "$area=true" >>"$out"
+	else
+		echo "$area=false" >>"$out"
+	fi
+done
+
+for area in "${!path_areas[@]}"; do
+	if [[ $run_all == true ]] || grep -qE "${path_areas[$area]}" <<<"$changed"; then
 		echo "$area=true" >>"$out"
 	else
 		echo "$area=false" >>"$out"

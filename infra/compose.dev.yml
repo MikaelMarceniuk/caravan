@@ -1,0 +1,14 @@
+# Local development overlay (docs/project/deploy.md §7): host ports bound to 127.0.0.1 and fixed dev credentials.
+# Override the defaults in infra/.env (see infra/.env.example).
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${CARAVAN_POSTGRES_USER:-caravan}
+      POSTGRES_PASSWORD: ${CARAVAN_POSTGRES_PASSWORD:-caravan}
+      POSTGRES_DB: ${CARAVAN_POSTGRES_DB:-caravan}
+    ports:
+      - "127.0.0.1:${CARAVAN_POSTGRES_PORT:-5433}:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:${CARAVAN_REDIS_PORT:-6380}:6379"

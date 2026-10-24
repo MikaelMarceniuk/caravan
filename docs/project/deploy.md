@@ -18,7 +18,7 @@
 | P7 | **"Reader before writer" protocol** (expand/contract for ops and effects too) | Rolling deploys with mixed instances and automatic rollback without divergence (section 5) |
 | P8 | **Dual stack: IPv4 + IPv6** (IPv4 at ~€0.50/month per server) | IPv6-only breaks outbound traffic to services without IPv6 (GitHub/GHCR, Grafana Cloud, Photon) and SSH from GitHub runners, which have no IPv6 |
 | P9 | **Public repository** on GitHub | It is a portfolio showcase, and the ARM runner and Actions are only free for public repos. Secrets never go into the repo (section 6) |
-| P10 | **CI split by area, with one summary check**: `ci.yml` has a job per area (`packages` today; `api`, `web` and `mobile` when they exist) that runs only when the area is affected: its `src/`, `__tests__/` or config changed, or one of its dependencies did (Turborepo's graph). Root config and the CI itself affect every area, and a push to `master` runs everything. A final `ci` job is the only required check | Unaffected areas cost nothing. With path filters at the workflow level, a PR that touches no code would leave the required check pending forever; the summary job always reports |
+| P10 | **CI split by area, with one summary check**: `ci.yml` has a job per area (`packages` today; `api`, `web` and `mobile` when they exist) that runs only when the area is affected: its `src/`, `__tests__/` or config changed, or one of its dependencies did (Turborepo's graph). Areas that are not workspaces, like `infra` (the compose files), are detected by path. Root config and the CI itself affect every area, and a push to `master` runs everything. A final `ci` job is the only required check | Unaffected areas cost nothing. With path filters at the workflow level, a PR that touches no code would leave the required check pending forever; the summary job always reports |
 
 **Alternative considered:** Oracle Cloud Always Free (A1: 2 OCPU / 12 GB, €0). Rejected because of the risks of idle instance reclamation, lack of capacity in the region and account termination. Hetzner costs ~€6.49/month and is predictable. Provisioning as code (section 6) keeps migrating cheap in both directions.
 
@@ -78,7 +78,7 @@ Only Caddy is on the `edge` network. Postgres and Redis live on the internal net
 | caddy | `caddy:2` | 64 MB | Cloudflare origin certificate in a file (15 years, no ACME) |
 | api-1/2 | `ghcr.io/<user>/caravan-api:<sha>` | 256 MB each | `bun build --compile` on `distroless/base-nossl`; graceful shutdown (section 5) |
 | web-1/2 | `ghcr.io/<user>/caravan-web:<sha>` | 256 MB each | `output: "standalone"` on `node:24-slim` |
-| postgres | `postgres:18` | 1 GB | `shared_buffers=256MB`, `effective_cache_size=1GB`, `max_connections=50`. On the CAX21: 2 GB, `shared_buffers=1GB`, `effective_cache_size=4GB` |
+| postgres | `postgres:18` | 1 GB | `shared_buffers=256MB`, `effective_cache_size=1GB`, `max_connections=50`, in `infra/postgres/postgresql.conf`. On the CAX21: 2 GB, `shared_buffers=1GB`, `effective_cache_size=4GB`. `shm_size: 256mb`: Docker's default 64 MB `/dev/shm` makes parallel queries fail |
 | redis | `redis:8` | 300 MB | `maxmemory 256mb`, `save ""`, `appendonly no` (presence, pub/sub, cache and rate limiting are ephemeral) |
 | backup | small image with `pg_dump` + `rclone` | 128 MB | Daily, 7-day retention on R2 |
 
@@ -137,7 +137,7 @@ push to master
 
 ## 6. Provisioning
 
-- `infra/provision/cloud-init.yaml`: Docker, a `deploy` user (SSH key only, no root), `unattended-upgrades`, 2 GB swap, the `/srv/caravan` directory.
+- `infra/provision/cloud-init.yaml`: Docker, a `deploy` user (SSH key only, no root), `unattended-upgrades`, 2 GB swap, `vm.overcommit_memory = 1` (Redis warns at startup without it; found in the M1 Docker Compose spike), the `/srv/caravan` directory.
 - `infra/provision/tofu/` (optional, but recommended for the résumé): OpenTofu with the `hcloud` and `cloudflare` providers, creating the VPS, the firewall, the DNS records and the origin certificate. About 60 lines.
 - **Hetzner projects:** `caravan-prod` and `caravan-homol`, each with its own API token. The staging token can't see production.
 - **Reserved primary IPs** (`auto_delete: false`): the server can be recreated without changing DNS.
@@ -153,6 +153,8 @@ push to master
 - **toxiproxy**, in the `chaos` profile: between the API and Postgres/Redis.
 
 Day to day, you can also run only Postgres and Redis in compose and the API/web with `bun dev`, with hot reload.
+
+**Today (M1):** the compose files have only Postgres and Redis, started with `bun run infra:up` (commands in `AGENTS.md`). The dev overlay publishes them on `127.0.0.1` only, on ports 5433 and 6380 by default, so they don't clash with another local Postgres or Redis; `infra/.env` overrides them. Caddy, api, web and mailpit (M4) and toxiproxy (M5) join when their milestones need them.
 
 ---
 
