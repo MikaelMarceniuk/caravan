@@ -4,7 +4,11 @@ import { APIError } from 'better-auth/api'
 import type { Database } from '../db/client'
 import * as schema from '../db/schema'
 import type { EmailMessage, Mailer } from '../email/mailer'
-import { type Locale, verificationEmail } from '../email/templates'
+import {
+	type Locale,
+	resetPasswordEmail,
+	verificationEmail,
+} from '../email/templates'
 import { hashPassword, verifyPassword } from './password'
 
 // The interface languages (architecture.md D34).
@@ -56,6 +60,14 @@ export function createAuth({ db, secret, baseURL, mailer }: AuthOptions) {
 			// Signing in waits for the confirmed email; sign-up then answers alike for new and taken emails.
 			requireEmailVerification: true,
 			password: { hash: hashPassword, verify: verifyPassword },
+			// Whoever had the old password loses their sessions.
+			revokeSessionsOnPasswordReset: true,
+			// Better Auth only calls it when the account exists, and answers the same either way.
+			sendResetPassword: async ({ user, url }) =>
+				send('password reset', {
+					to: user.email,
+					...resetPasswordEmail(emailFor(user, url)),
+				}),
 		},
 		emailVerification: {
 			sendOnSignUp: true,
