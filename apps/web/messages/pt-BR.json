@@ -1,0 +1,90 @@
+{
+	"app": {
+		"description": "Planeje viagens juntos, em tempo real.",
+		"tagline": "Planeje a viagem juntos.",
+		"taglineMuted": "Funciona mesmo quando o sinal some.",
+		"footer": "Um projeto de portfólio open source",
+		"github": "Ver no GitHub",
+		"notImplemented": "Ainda não implementado"
+	},
+	"fields": {
+		"name": "Seu nome",
+		"email": "Email",
+		"password": "Senha",
+		"newPassword": "Nova senha",
+		"showPassword": "Mostrar senha",
+		"hidePassword": "Ocultar senha",
+		"passwordHint": "{minimum}+ caracteres",
+		"passwordStrength": "Tamanho da senha: {length} de {minimum} caracteres"
+	},
+	"errors": {
+		"nameRequired": "Informe o seu nome.",
+		"emailInvalid": "Informe um email válido.",
+		"passwordTooShort": "Use pelo menos {minimum} caracteres.",
+		"passwordTooLong": "Use no máximo {maximum} caracteres.",
+		"wrongCredentials": "Email ou senha incorretos.",
+		"emailNotVerified": "Confirme o seu email primeiro: enviamos um novo link.",
+		"tooManyRequests": "Muitas tentativas. Espere um pouco e tente de novo.",
+		"unexpected": "Algo deu errado. Tente de novo."
+	},
+	"signIn": {
+		"title": "Bem-vindo de volta",
+		"subtitle": "Continue de onde o seu grupo parou.",
+		"google": "Continuar com Google",
+		"orWithEmail": "ou com email",
+		"forgotPassword": "Esqueceu a senha?",
+		"submit": "Entrar",
+		"newHere": "Novo no Caravan?",
+		"createAccount": "Criar uma conta",
+		"passwordChanged": "A sua senha foi trocada. Entre com a nova."
+	},
+	"signUp": {
+		"title": "Entre na viagem",
+		"subtitle": "Crie a sua conta para começar a planejar com o grupo.",
+		"submit": "Criar conta",
+		"termsBefore": "Ao criar uma conta, você concorda com os",
+		"terms": "Termos",
+		"and": "e a",
+		"privacy": "Política de Privacidade",
+		"haveAccount": "Já tem uma conta?",
+		"signIn": "Entrar",
+		"checkEmailTitle": "Verifique o seu email",
+		"checkEmail": "Enviamos um link de confirmação para {email}. Ele vale por 1 hora.",
+		"backToSignIn": "Voltar para o login"
+	},
+	"forgotPassword": {
+		"title": "Esqueceu a senha?",
+		"subtitle": "Informe o seu email e enviaremos um link para definir uma nova.",
+		"submit": "Enviar link",
+		"sentTitle": "Verifique o seu email",
+		"sent": "Se existir uma conta para {email}, enviamos um link para definir uma nova senha. Ele vale por 1 hora.",
+		"backToSignIn": "Voltar para o login"
+	},
+	"resetPassword": {
+		"title": "Defina uma nova senha",
+		"subtitle": "Escolha a senha que você vai usar daqui em diante.",
+		"submit": "Salvar senha",
+		"invalidLink": "Este link é inválido ou expirou.",
+		"askAgain": "Pedir um novo link"
+	},
+	"verifyEmail": {
+		"title": "Confirme o seu email",
+		"invalidLink": "Este link de confirmação é inválido ou expirou. Entre para receber outro.",
+		"signIn": "Entrar"
+	},
+	"session": {
+		"title": "Sua sessão",
+		"subtitle": "Lida no servidor, a partir do cookie da sua sessão.",
+		"name": "Nome",
+		"email": "Email",
+		"language": "Idioma",
+		"emailConfirmed": "Email confirmado",
+		"yes": "Sim",
+		"no": "Não",
+		"signOut": "Sair"
+	},
+	"languages": {
+		"pt-BR": "Português (Brasil)",
+		"en-US": "English (US)"
+	}
+}

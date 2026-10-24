@@ -1,0 +1,45 @@
+{
+	"$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+	"root": false,
+	"extends": "//",
+	"files": {
+		"includes": ["**", "!.next", "!next-env.d.ts"]
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"linter": {
+		"domains": {
+			"next": "recommended",
+			"react": "recommended"
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["src/components/ui/**"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useSemanticElements": "off"
+					},
+					"suspicious": {
+						"noDoubleEquals": "off",
+						"noArrayIndexKey": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/app/globals.css"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noImportantStyles": "off"
+					}
+				}
+			}
+		}
+	]
+}

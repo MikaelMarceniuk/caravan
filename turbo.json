@@ -11,7 +11,13 @@
 				"biome.json",
 				"drizzle.config.ts",
 				"scripts/**",
-				"theme.css"
+				"theme.css",
+				"messages/**",
+				"public/**",
+				"next.config.ts",
+				"postcss.config.mjs",
+				"components.json",
+				"bunfig.toml"
 			],
 			"outputs": []
 		},
@@ -24,14 +30,31 @@
 				"tsconfig*.json",
 				"drizzle.config.ts",
 				"scripts/**",
-				"theme.css"
+				"theme.css",
+				"messages/**",
+				"public/**",
+				"next.config.ts",
+				"postcss.config.mjs",
+				"components.json",
+				"bunfig.toml"
 			],
 			"outputs": []
 		},
 		"build": {
 			"dependsOn": ["^build"],
-			"inputs": ["src/**", "package.json", "tsconfig*.json"],
-			"outputs": ["dist/**"]
+			"inputs": [
+				"src/**",
+				"package.json",
+				"tsconfig*.json",
+				"messages/**",
+				"public/**",
+				"next.config.ts",
+				"postcss.config.mjs",
+				"components.json",
+				"bunfig.toml"
+			],
+			"outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+			"env": ["API_URL"]
 		},
 		"test": {
 			"dependsOn": ["typecheck"],
@@ -42,7 +65,13 @@
 				"tsconfig*.json",
 				"drizzle.config.ts",
 				"scripts/**",
-				"theme.css"
+				"theme.css",
+				"messages/**",
+				"public/**",
+				"next.config.ts",
+				"postcss.config.mjs",
+				"components.json",
+				"bunfig.toml"
 			],
 			"env": ["DATABASE_URL"],
 			"outputs": []

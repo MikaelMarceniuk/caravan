@@ -1,0 +1,90 @@
+{
+	"app": {
+		"description": "Plan trips together, in real time.",
+		"tagline": "Plan the trip together.",
+		"taglineMuted": "It still works when the signal doesn't.",
+		"footer": "An open-source portfolio project",
+		"github": "View on GitHub",
+		"notImplemented": "Not implemented yet"
+	},
+	"fields": {
+		"name": "Your name",
+		"email": "Email",
+		"password": "Password",
+		"newPassword": "New password",
+		"showPassword": "Show password",
+		"hidePassword": "Hide password",
+		"passwordHint": "{minimum}+ characters",
+		"passwordStrength": "Password length: {length} of {minimum} characters"
+	},
+	"errors": {
+		"nameRequired": "Enter your name.",
+		"emailInvalid": "Enter a valid email.",
+		"passwordTooShort": "Use at least {minimum} characters.",
+		"passwordTooLong": "Use at most {maximum} characters.",
+		"wrongCredentials": "Wrong email or password.",
+		"emailNotVerified": "Confirm your email first: we sent you a new link.",
+		"tooManyRequests": "Too many attempts. Wait a moment and try again.",
+		"unexpected": "Something went wrong. Try again."
+	},
+	"signIn": {
+		"title": "Welcome back",
+		"subtitle": "Pick up where your group left off.",
+		"google": "Continue with Google",
+		"orWithEmail": "or with email",
+		"forgotPassword": "Forgot password?",
+		"submit": "Sign in",
+		"newHere": "New to Caravan?",
+		"createAccount": "Create an account",
+		"passwordChanged": "Your password was changed. Sign in with the new one."
+	},
+	"signUp": {
+		"title": "Join the trip",
+		"subtitle": "Create your account to start planning with the group.",
+		"submit": "Create account",
+		"termsBefore": "By creating an account you agree to the",
+		"terms": "Terms",
+		"and": "and",
+		"privacy": "Privacy Policy",
+		"haveAccount": "Already have an account?",
+		"signIn": "Sign in",
+		"checkEmailTitle": "Check your email",
+		"checkEmail": "We sent a confirmation link to {email}. It is valid for 1 hour.",
+		"backToSignIn": "Back to sign in"
+	},
+	"forgotPassword": {
+		"title": "Forgot your password?",
+		"subtitle": "Enter your email and we'll send you a link to set a new one.",
+		"submit": "Send link",
+		"sentTitle": "Check your email",
+		"sent": "If there is an account for {email}, we sent it a link to set a new password. It is valid for 1 hour.",
+		"backToSignIn": "Back to sign in"
+	},
+	"resetPassword": {
+		"title": "Set a new password",
+		"subtitle": "Choose the password you'll use from now on.",
+		"submit": "Save password",
+		"invalidLink": "This link is invalid or has expired.",
+		"askAgain": "Ask for a new link"
+	},
+	"verifyEmail": {
+		"title": "Confirm your email",
+		"invalidLink": "This confirmation link is invalid or has expired. Sign in to get a new one.",
+		"signIn": "Sign in"
+	},
+	"session": {
+		"title": "Your session",
+		"subtitle": "Read on the server, from your session cookie.",
+		"name": "Name",
+		"email": "Email",
+		"language": "Language",
+		"emailConfirmed": "Email confirmed",
+		"yes": "Yes",
+		"no": "No",
+		"signOut": "Sign out"
+	},
+	"languages": {
+		"pt-BR": "Português (Brasil)",
+		"en-US": "English (US)"
+	}
+}
