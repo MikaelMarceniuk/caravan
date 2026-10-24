@@ -1,0 +1,42 @@
+# Base services shared by every environment (docs/project/deploy.md §3 and §12).
+# No ports are published here: in production, Postgres and Redis stay on the internal network.
+name: caravan
+
+services:
+  postgres:
+    image: postgres:18.6
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    # Docker's default 64 MB /dev/shm makes parallel queries fail with "could not resize shared memory segment".
+    shm_size: 256mb
+    volumes:
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      # Since postgres:18 the volume goes on /var/lib/postgresql (PGDATA is /var/lib/postgresql/18/docker).
+      - pgdata:/var/lib/postgresql
+    networks: [backend]
+    healthcheck:
+      # TCP, not the socket: the entrypoint's temporary init server listens only on the socket.
+      test: ["CMD-SHELL", 'pg_isready -q -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+      start_interval: 1s
+
+  redis:
+    image: redis:8.10.2
+    # Presence, pub/sub, cache and rate limiting are ephemeral: no persistence.
+    command: ["redis-server", "--maxmemory", "256mb", "--save", "", "--appendonly", "no"]
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+      start_interval: 1s
+
+networks:
+  backend:
+
+volumes:
+  pgdata:

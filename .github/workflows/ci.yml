@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       packages: ${{ steps.areas.outputs.packages }}
+      infra: ${{ steps.areas.outputs.infra }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -48,10 +49,34 @@ jobs:
       - name: Lint, typecheck, build and test
         run: bunx turbo run lint typecheck build test --filter='./packages/*'
 
+  infra:
+    name: Infra
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    env:
+      # Same files as the root `infra:*` scripts.
+      COMPOSE_FILE: infra/compose.yml:infra/compose.dev.yml
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate compose files
+        run: docker compose config -q
+      - name: Start Postgres and Redis
+        run: docker compose up -d --wait
+      - name: Check configuration
+        run: infra/check.sh
+      - name: Show logs
+        if: failure()
+        run: docker compose logs
+      - name: Stop and remove volumes
+        if: always()
+        run: docker compose down -v
+
   ci:
     name: CI
     if: always()
-    needs: [changes, packages]
+    needs: [changes, packages, infra]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 5
     steps:

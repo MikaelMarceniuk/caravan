@@ -89,7 +89,7 @@ These apply to every milestone: responsiveness and accessibility are part of eve
 #### M1 — Foundation
 - [x] Monorepo (Bun + Turborepo), Biome, basic CI
 - [ ] Buy the domain (Cloudflare Registrar)
-- [ ] Docker Compose (Postgres, Redis)
+- [x] Docker Compose (Postgres, Redis)
 - [ ] Database schema + migrations (Drizzle)
 - [ ] Auth with Better Auth: email and password (no email sending)
 - [ ] REST: create and list trips
