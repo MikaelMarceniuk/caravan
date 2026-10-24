@@ -1,7 +1,7 @@
 # Caravan — Arquitetura
 
 > Documento técnico de referência. O produto, o escopo e o roadmap estão em [`planner.md`](./planner.md); as telas, em [`design/`](./design).
-> Última revisão: 2026-10-16. Vocabulário do domínio: [`CONTEXT.md`](../CONTEXT.md).
+> Última revisão: 2026-10-24. Vocabulário do domínio: [`CONTEXT.md`](../CONTEXT.md).
 
 ---
 
@@ -37,6 +37,7 @@
 | D26 | **`Place` = `{ name, lat, lon, countryCode, osmId }`**, guardado inteiro em `place_json` desde a v1 | `lat/lon` é o formato de qualquer mapa open source (MapLibre, Leaflet, OpenLayers) e de qualquer fonte de tiles OSM: o mapa pode ser trocado sem migração. O Photon já devolve tudo, então não custa nada guardar antes de o mapa existir |
 | D27 | **Mapa com MapLibre GL JS + tiles do OpenFreeMap**; sem Google Maps, sem fallback e sem servidor de tiles próprio | Tudo open source, grátis e sem chave; a biblioteca roda no navegador, então não há container. Trocar a fonte de tiles depois é mudar uma URL no estilo |
 | D28 | **IDs em UUIDv7, coluna `uuid`**: o que nasce no cliente (stops, atividades, `opId`) usa `newId()` do `core` (lib `uuid`, `v7()`); o que o servidor cria (usuários, viagens, convites por e-mail) usa `DEFAULT uuidv7()` do Postgres. O servidor valida todo ID vindo do cliente (seção 18) | O `opId` tem de nascer no cliente para o reenvio ser idempotente (D16), e o ID da entidade, para a UI otimista não precisar trocar IDs temporários. Uma função só no navegador, no Bun e no RN; o v7 é ordenado no tempo, então os INSERTs vão para o fim do índice |
+| D29 | **Validação com Zod 4 em tudo**: os schemas moram no `core` e valem para as ops e mensagens do WS, para as rotas REST do Elysia (via Standard Schema, com o Eden inferindo os tipos) e para os clientes. Sem o `t` (TypeBox) do Elysia | Uma biblioteca só, legível para quem lê o repo. O Zod não gera código com `new Function`, então roda igual no Bun, no navegador com CSP rígida e no React Native. A vantagem de velocidade do TypeBox são microssegundos antes do lock, contra milissegundos da transação. Se o microbenchmark do M2 mostrar custo nos cursores, só essa mensagem ganha uma checagem à mão. A conferir no setup da API (M1): o Eden infere os tipos e o OpenAPI sai certo com Zod; se não, o REST volta para o `t` |
 
 ---
 
