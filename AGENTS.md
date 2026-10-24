@@ -40,3 +40,5 @@ Tool versions come from `mise.toml` (`mise install`). Bun's version is also in t
 - `bun run --filter @caravan/api dev`: start the API with hot reload. `GET /healthz` and `GET /ready` answer on `localhost:3000`.
 - `bun run --filter @caravan/api db:generate --name <name>`: write a migration from the Drizzle schema in `apps/api/src/db/schema/`. Each feature adds its own tables and migration. Migrations are additive; one that drops, renames or tightens something is named `contract_<reason>` (`deploy.md` P11), or the tests fail.
 - `bun run --filter @caravan/api db:migrate`: apply the pending migrations to `DATABASE_URL`.
+- `bun run --filter @caravan/web dev`: start the web on `localhost:3001` (Node 24). It forwards `/api/*` to the API at `API_URL` (default `http://localhost:3000`), so run the API too; sign-up emails need `RESEND_API_KEY` in `apps/api/.env`.
+- `bun run --filter @caravan/tokens generate`: rewrite `packages/tokens/theme.css` after changing a token (a test fails while it is out of date).

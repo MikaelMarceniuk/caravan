@@ -42,7 +42,7 @@
 
 ### Open
 
-- Automated checking tools (e.g. `@axe-core/playwright` in E2E, `axe-core` in component tests with happy-dom). Check during the web setup what axe can verify without a real browser.
+- ~~Automated checking tools~~ Decided in the web setup (plan 4, B7): `axe-core` runs in the component tests with happy-dom for what needs no layout (names, labels, roles, ARIA); color contrast is the tokens' own test (`packages/tokens`); axe in a real browser comes with Playwright.
 - Do breakpoints become theme tokens, or do we keep the UI library's defaults?
 
 ---
@@ -88,7 +88,7 @@ These seams are the default reference for tests. A task that uses a listed seam,
 | `packages/sync` | The package's public API | `Transport`/`Storage`/`Clock` ports with fakes |
 | `apps/api` | WS and REST | Real API + Postgres + Redis from the compose file |
 | `apps/api` migrations | The migrations folder and the Drizzle schema | Applied to a real, empty Postgres; schema × migrations through `drizzle-kit/api`; the additive policy (`deploy.md` P11) as a pure function tested with literal SQL |
-| `apps/web` | What the user sees | `bun test` + Testing Library + happy-dom, querying by role and label (which also enforces accessibility) |
+| `apps/web` | What the user sees | `bun test` + Testing Library + happy-dom, querying by role and label (which also enforces accessibility). The network edge is the axios instance's adapter (`__tests__/support/fake-api.ts`) and `next/navigation` gets a stand-in; server components stay thin and are checked by hand |
 | Flows | Browser | Playwright |
 
 Ask the project owner before writing the tests that depend on the choice of seam when:

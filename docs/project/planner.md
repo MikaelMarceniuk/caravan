@@ -92,7 +92,7 @@ These apply to every milestone: responsiveness and accessibility are part of eve
 - [x] Docker Compose (Postgres, Redis)
 - [x] API (Elysia) + Drizzle
 - [x] Auth with Better Auth: email and password, email verification and forgot password (Resend) + first migration and migration tests
-- [ ] Web (Next.js): sign up, sign in, session and sign out
+- [x] Web (Next.js): sign up, sign in, session and sign out
 - [ ] REST: create and list trips
 - [ ] **Minimal production deploy:** CAX11, Caddy, Cloudflare, CI deploying (1 API instance)
 - [ ] **Risk spike:** a Next.js page opening offline with Serwist
