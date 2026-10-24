@@ -4,6 +4,13 @@
 /* The color tokens as CSS variables (packages/tokens, architecture.md D31). */
 @import "@caravan/tokens/theme.css";
 
+/*
+ * The tokens are already the dark theme (architecture.md §18). shadcn's `dark:` styles assume a light theme
+ * turned dark, so they only apply under a `.dark` class the app never sets: the page looks the same whatever
+ * the visitor's system theme.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
 	--font-sans: var(--font-body);
 	--font-heading: var(--font-display);

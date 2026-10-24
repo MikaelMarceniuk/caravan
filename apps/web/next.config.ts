@@ -9,6 +9,8 @@ const API_URL = process.env.API_URL ?? 'http://localhost:3000'
 
 const config: NextConfig = {
 	output: 'standalone',
+	// The repo's own AGENTS.md is the guide; `next dev` would otherwise write one here.
+	agentRules: false,
 	// The standalone build traces files from the repo root (a monorepo).
 	outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
 	// Workspace packages ship TypeScript sources (architecture.md D36).

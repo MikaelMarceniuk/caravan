@@ -14,7 +14,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 				<header>
 					<Logo />
 				</header>
-				<main className="flex flex-1 flex-col justify-center py-10">
+				<main className="flex flex-1 flex-col justify-center py-8">
 					<div className="w-full max-w-md">{children}</div>
 				</main>
 				<footer className="text-xs text-subtle">
@@ -27,11 +27,15 @@ export function AuthLayout({ children }: { children: ReactNode }) {
 					</a>
 				</footer>
 			</div>
-			<aside className="relative hidden overflow-hidden bg-canvas bg-[radial-gradient(var(--color-surface)_1.5px,transparent_1.5px)] bg-size-[24px_24px] lg:flex lg:flex-col lg:justify-between lg:px-20 lg:py-24">
-				<div aria-hidden="true" className="flex flex-1 justify-center">
+			{/* Absolute children: the illustration never makes the page taller than the form. */}
+			<aside className="relative hidden overflow-hidden bg-canvas bg-[radial-gradient(var(--color-surface)_1.5px,transparent_1.5px)] bg-size-[24px_24px] lg:block">
+				<div
+					aria-hidden="true"
+					className="absolute top-14 left-1/2 -translate-x-1/2"
+				>
 					<Postcards />
 				</div>
-				<p className="max-w-xl font-heading text-3xl leading-tight font-bold tracking-tight">
+				<p className="absolute right-20 bottom-14 left-20 max-w-xl font-heading text-3xl leading-tight font-bold tracking-tight">
 					{t('tagline')}{' '}
 					<span className="text-subtle">{t('taglineMuted')}</span>
 				</p>

@@ -55,7 +55,7 @@ function Cursor({ name, className }: { name: string; className: string }) {
 
 export function Postcards() {
 	return (
-		<div className="relative h-[680px] w-[540px]">
+		<div className="relative h-[700px] w-[540px]">
 			<Postcard
 				city="Kyoto"
 				country="JP"
@@ -65,16 +65,16 @@ export function Postcards() {
 			<Postcard
 				city="Lisbon"
 				country="PT"
-				className="top-48 left-36 rotate-3 bg-orange"
+				className="top-52 left-36 rotate-3 bg-orange"
 			/>
 			<Postcard
 				city="Lençóis"
 				country="BR"
 				dates="Mar 2 – 6"
-				className="top-96 left-0 -rotate-2 bg-teal"
+				className="top-[27rem] left-0 -rotate-2 bg-teal"
 			/>
 			<Cursor name="Ana" className="top-44 left-[440px] text-blue" />
-			<Cursor name="Leo" className="top-[650px] left-28 text-magenta" />
+			<Cursor name="Leo" className="top-[688px] left-28 text-magenta" />
 		</div>
 	)
 }

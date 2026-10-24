@@ -49,6 +49,7 @@ export function PasswordField({
 				<InputGroupAddon align="inline-end">
 					<InputGroupButton
 						size="icon-sm"
+						className="size-11"
 						aria-label={visible ? t('hidePassword') : t('showPassword')}
 						onClick={() => setVisible((shown) => !shown)}
 					>
