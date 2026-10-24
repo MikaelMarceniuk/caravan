@@ -88,10 +88,11 @@ These apply to every milestone: responsiveness and accessibility are part of eve
 
 #### M1 — Foundation
 - [x] Monorepo (Bun + Turborepo), Biome, basic CI
-- [ ] Buy the domain (Cloudflare Registrar)
+- [ ] Buy the domain (Cloudflare Registrar). Needed before sign-up opens in production: until the domain is verified, Resend only delivers to the account owner's address
 - [x] Docker Compose (Postgres, Redis)
 - [x] API (Elysia) + Drizzle
-- [ ] Auth with Better Auth: email and password (no email sending) + first migration and migration tests
+- [x] Auth with Better Auth: email and password, email verification and forgot password (Resend) + first migration and migration tests
+- [ ] Web (Next.js): sign up, sign in, session and sign out
 - [ ] REST: create and list trips
 - [ ] **Minimal production deploy:** CAX11, Caddy, Cloudflare, CI deploying (1 API instance)
 - [ ] **Risk spike:** a Next.js page opening offline with Serwist
@@ -120,9 +121,8 @@ These apply to every milestone: responsiveness and accessibility are part of eve
 **Done when:** a whole trip can be planned in the app.
 
 #### M4 — Collaboration
-- [ ] Email infrastructure: Resend, verified domain, templates
+- [ ] Email: Resend verified domain + invite email templates (Resend and the auth emails came in M1)
 - [ ] Invites: link (role, expires in 7 days, reset) and email (resend, accept/decline); join
-- [ ] "Forgot password"
 - [ ] Members as system ops (join, leave, change role)
 - [ ] Presence: avatars and "editing" (card and field)
 - [ ] Edit lock per entity (`lock.acquire/release`, `edit_locks` table, `tabId`, check inside the transaction) + "Ana is editing" UI + `locked` toast with *Restore with my change*
