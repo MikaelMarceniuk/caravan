@@ -137,7 +137,7 @@ push to master
 
 ## 6. Provisioning
 
-- `infra/provision/cloud-init.yaml`: Docker, a `deploy` user (SSH key only, no root), `unattended-upgrades`, 2 GB swap, the `/srv/caravan` directory.
+- `infra/provision/cloud-init.yaml`: Docker, a `deploy` user (SSH key only, no root), `unattended-upgrades`, 2 GB swap, `vm.overcommit_memory = 1` (Redis warns at startup without it; found in the M1 Docker Compose spike), the `/srv/caravan` directory.
 - `infra/provision/tofu/` (optional, but recommended for the résumé): OpenTofu with the `hcloud` and `cloudflare` providers, creating the VPS, the firewall, the DNS records and the origin certificate. About 60 lines.
 - **Hetzner projects:** `caravan-prod` and `caravan-homol`, each with its own API token. The staging token can't see production.
 - **Reserved primary IPs** (`auto_delete: false`): the server can be recreated without changing DNS.
