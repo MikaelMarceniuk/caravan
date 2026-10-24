@@ -6,7 +6,16 @@ import type { Database } from '../../src/db/client'
 export const BASE_URL = 'http://localhost:3001'
 const SECRET = 'test-secret-that-is-at-least-32-characters-long'
 
-/** The real app with a Better Auth instance of its own, so in-memory state (rate limits) never leaks between tests. */
+/**
+ * A random client address. Better Auth keeps its in-memory rate limit counters in a module-level map shared by every
+ * instance, keyed by address and path: each request gets its own address unless a test sets `x-forwarded-for`.
+ */
+function randomAddress() {
+	const [a, b, c] = crypto.getRandomValues(new Uint8Array(3))
+	return `10.${a}.${b}.${c}`
+}
+
+/** The real app, as `index.ts` builds it, with test settings. */
 export function createTestApp(db: Database, { baseURL = BASE_URL } = {}) {
 	return createApp({
 		db,
@@ -30,7 +39,11 @@ export function getAuth(
 ) {
 	return app.handle(
 		new Request(`${BASE_URL}/api/auth${path}`, {
-			headers: { origin: BASE_URL, ...headers },
+			headers: {
+				origin: BASE_URL,
+				'x-forwarded-for': randomAddress(),
+				...headers,
+			},
 		}),
 	)
 }
@@ -69,6 +82,7 @@ export function postAuth(
 			headers: {
 				'content-type': 'application/json',
 				origin: BASE_URL,
+				'x-forwarded-for': randomAddress(),
 				...headers,
 			},
 			body: JSON.stringify(body),

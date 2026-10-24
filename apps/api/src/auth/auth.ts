@@ -53,6 +53,8 @@ export function createAuth({ db, secret, baseURL }: AuthOptions) {
 				update: { before: async (user) => rejectUnknownLocale(user) },
 			},
 		},
+		// On everywhere, not only in production, so it is the same in tests. In memory: one API instance until M5.
+		rateLimit: { enabled: true },
 		advanced: {
 			// Postgres generates the ids: DEFAULT uuidv7() (architecture.md D28).
 			database: { generateId: false },
