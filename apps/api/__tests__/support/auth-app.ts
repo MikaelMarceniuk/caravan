@@ -19,6 +19,23 @@ export function uniqueEmail() {
 	return `traveler+${crypto.randomUUID()}@example.com`
 }
 
+export const PASSWORD = 'a-long-password'
+
+/** Creates an account through the API and returns its email. */
+export async function signUp(
+	app: ReturnType<typeof createApp>,
+	{ email = uniqueEmail(), locale }: { email?: string; locale?: string } = {},
+) {
+	const response = await postAuth(app, '/sign-up/email', {
+		name: 'Ana',
+		email,
+		password: PASSWORD,
+		locale,
+	})
+	if (!response.ok) throw new Error(`Sign-up failed: ${response.status}`)
+	return email
+}
+
 export function postAuth(
 	app: ReturnType<typeof createApp>,
 	path: string,
