@@ -22,7 +22,14 @@ export function tripRoutes({ db, auth }: AppDependencies) {
 				'/',
 				async ({ body, traveler, status }) =>
 					status(201, { trip: await createTrip(db, traveler.id, body) }),
-				{ traveler: true, body: t.Object({ name: t.String() }) },
+				{
+					traveler: true,
+					// Runs before the validation, so the limits apply to the name as it is saved.
+					transform({ body }) {
+						if (typeof body?.name === 'string') body.name = body.name.trim()
+					},
+					body: t.Object({ name: t.String({ minLength: 1 }) }),
+				},
 			)
 	)
 }
