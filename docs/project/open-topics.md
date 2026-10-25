@@ -30,6 +30,7 @@
 | 19 | Out-of-order messages: timings and test plan | `packages/sync` | 🟠 |
 | 20 | Version discipline (P7) in practice | 1st deploy | 🟡 |
 | 21 | New limits (lock and cursors) | Presence and lock | 🟢 |
+| 24 | Auth limits across instances | 2 API instances (M5) | 🟢 |
 | **F. Practical preparation** | | Auth, CI, deploy | 🟡 |
 
 ---
@@ -182,10 +183,18 @@ Missing from the limits table (`architecture.md` §18):
 
 ---
 
+### 24. Auth limits across instances 🟢
+
+**Why it matters:** Better Auth's rate limit and the limit of 3 emails per address an hour (D41) keep their counters in each API process's memory. With 2 instances (M5), each one counts apart, so the real limits double; a restart also resets them.
+
+**Starting recommendation:** move both to Redis with the second instance: Better Auth's `secondary-storage` for the rate limit, and the same Redis for the email counter.
+
+---
+
 ## F. Practical preparation
 
 - [ ] Domain: pick the name (`caravan.x` is a placeholder today) and buy it on Cloudflare Registrar. It comes before Resend.
-- [ ] Resend: it only sends to arbitrary addresses after the domain is verified. Locally, mailpit covers it.
+- [ ] Resend: in use since M1, sending from `onboarding@resend.dev`, which only delivers to the account owner's address. Arbitrary addresses, and so sign-up in production, wait for the verified domain.
 - [ ] Google OAuth client and Sign in with Apple (when they come in; Apple requires the paid developer account).
 - [ ] `LICENSE`.
 

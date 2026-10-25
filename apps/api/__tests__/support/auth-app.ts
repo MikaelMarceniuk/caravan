@@ -1,6 +1,8 @@
 import { createApp } from '../../src/app'
 import { createAuth } from '../../src/auth/auth'
 import type { Database } from '../../src/db/client'
+import type { Mailer } from '../../src/email/mailer'
+import { createFakeMailer, type FakeMailer, linkIn } from './fake-mailer'
 
 // The web's origin: Better Auth only trusts requests from its base URL.
 export const BASE_URL = 'http://localhost:3001'
@@ -15,11 +17,17 @@ function randomAddress() {
 	return `10.${a}.${b}.${c}`
 }
 
-/** The real app, as `index.ts` builds it, with test settings. */
-export function createTestApp(db: Database, { baseURL = BASE_URL } = {}) {
+/** The real app, as `index.ts` builds it, with test settings. Pass a mailer to read the emails it sends. */
+export function createTestApp(
+	db: Database,
+	{
+		baseURL = BASE_URL,
+		mailer = createFakeMailer(),
+	}: { baseURL?: string; mailer?: Mailer } = {},
+) {
 	return createApp({
 		db,
-		auth: createAuth({ db, secret: SECRET, baseURL }),
+		auth: createAuth({ db, secret: SECRET, baseURL, mailer }),
 	})
 }
 
@@ -65,9 +73,25 @@ export async function signUp(
 		email,
 		password: PASSWORD,
 		locale,
+		callbackURL: '/verify-email',
 	})
 	if (!response.ok) throw new Error(`Sign-up failed: ${response.status}`)
 	return { email, response }
+}
+
+/**
+ * Signs up and confirms the email by following the link the mailer got, like a traveler would.
+ * Returns the email and the response of the confirmation, which opened the session.
+ */
+export async function signUpVerified(
+	app: ReturnType<typeof createApp>,
+	mailer: FakeMailer,
+	options: { email?: string; locale?: string } = {},
+) {
+	const { email } = await signUp(app, options)
+	const message = mailer.sent.findLast((sent) => sent.to === email)
+	const confirmation = await app.handle(new Request(linkIn(message)))
+	return { email, confirmation, cookie: sessionCookie(confirmation) }
 }
 
 export function postAuth(

@@ -3,21 +3,22 @@ import {
 	createTestApp,
 	getAuth,
 	postAuth,
-	sessionCookie,
-	signUp,
+	signUpVerified,
 } from '../support/auth-app'
+import { createFakeMailer, linkIn } from '../support/fake-mailer'
 import { useTestDatabase } from '../support/test-database'
 
 describe('the session', () => {
 	const database = useTestDatabase()
 
 	test('tells who is signed in, with their language', async () => {
-		const app = createTestApp(database.db)
-		const { email, response } = await signUp(app, { locale: 'pt-BR' })
-
-		const session = await getAuth(app, '/get-session', {
-			cookie: sessionCookie(response),
+		const mailer = createFakeMailer()
+		const app = createTestApp(database.db, { mailer })
+		const { email, cookie } = await signUpVerified(app, mailer, {
+			locale: 'pt-BR',
 		})
+
+		const session = await getAuth(app, '/get-session', { cookie })
 
 		expect(session.status).toBe(200)
 		expect((await session.json()) as unknown).toMatchObject({
@@ -34,9 +35,9 @@ describe('the session', () => {
 	})
 
 	test('ends when the traveler signs out', async () => {
-		const app = createTestApp(database.db)
-		const { response } = await signUp(app)
-		const cookie = sessionCookie(response)
+		const mailer = createFakeMailer()
+		const app = createTestApp(database.db, { mailer })
+		const { cookie } = await signUpVerified(app, mailer)
 
 		const signOut = await postAuth(app, '/sign-out', {}, { cookie })
 		const session = await getAuth(app, '/get-session', { cookie })
@@ -49,24 +50,29 @@ describe('the session', () => {
 describe('the session cookie', () => {
 	const database = useTestDatabase()
 
-	test('is out of reach of scripts and of cross-site requests', async () => {
-		const app = createTestApp(database.db)
-
-		const { response } = await signUp(app)
-
-		const cookie = response.headers
+	const sessionSetCookie = (response: Response) =>
+		response.headers
 			.getSetCookie()
 			.find((header) => header.includes('session_token='))
+
+	test('is out of reach of scripts and of cross-site requests', async () => {
+		const mailer = createFakeMailer()
+		const app = createTestApp(database.db, { mailer })
+
+		const { confirmation } = await signUpVerified(app, mailer)
+
+		const cookie = sessionSetCookie(confirmation)
 		expect(cookie).toContain('HttpOnly')
 		expect(cookie).toContain('SameSite=Lax')
 	})
 
 	test('is only sent over HTTPS when the site is served over HTTPS', async () => {
+		const mailer = createFakeMailer()
 		const app = createTestApp(database.db, {
 			baseURL: 'https://caravan.example',
+			mailer,
 		})
-
-		const response = await app.handle(
+		await app.handle(
 			new Request('https://caravan.example/api/auth/sign-up/email', {
 				method: 'POST',
 				headers: {
@@ -81,9 +87,8 @@ describe('the session cookie', () => {
 			}),
 		)
 
-		const cookie = response.headers
-			.getSetCookie()
-			.find((header) => header.includes('session_token='))
-		expect(cookie).toContain('Secure')
+		const confirmation = await app.handle(new Request(linkIn(mailer.sent[0])))
+
+		expect(sessionSetCookie(confirmation)).toContain('Secure')
 	})
 })

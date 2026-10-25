@@ -3,6 +3,13 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError } from 'better-auth/api'
 import type { Database } from '../db/client'
 import * as schema from '../db/schema'
+import type { EmailMessage, Mailer } from '../email/mailer'
+import { createSendLimit } from '../email/send-limit'
+import {
+	type Locale,
+	resetPasswordEmail,
+	verificationEmail,
+} from '../email/templates'
 import { hashPassword, verifyPassword } from './password'
 
 // The interface languages (architecture.md D34).
@@ -26,16 +33,68 @@ export type AuthOptions = {
 	secret: string
 	/** The web's public origin: email links and cookies belong to it (deploy.md P2). */
 	baseURL: string
+	mailer: Mailer
 }
 
-export function createAuth({ db, secret, baseURL }: AuthOptions) {
+type Traveler = { email: string; name: string; locale?: unknown }
+
+// Verification and reset emails together, per address (plan B4).
+const EMAILS_PER_ADDRESS = 3
+const EMAIL_WINDOW_MS = 60 * 60 * 1000
+
+export function createAuth({ db, secret, baseURL, mailer }: AuthOptions) {
+	const sendLimit = createSendLimit({
+		max: EMAILS_PER_ADDRESS,
+		windowMs: EMAIL_WINDOW_MS,
+		now: Date.now,
+	})
+
+	// Not awaited: how long the provider takes must not tell whether an account exists (Better Auth's advice).
+	// Over the limit, nothing is sent and the answer stays the same.
+	function send(kind: string, message: EmailMessage) {
+		if (!sendLimit.allow(message.to)) {
+			console.warn(`Skipped a ${kind} email: the address reached its limit.`)
+			return
+		}
+		void mailer.send(message).catch((error: unknown) => {
+			// The kind and the error only: never the address, the body or the link.
+			console.error(`Failed to send the ${kind} email:`, error)
+		})
+	}
+	const emailFor = (user: Traveler, url: string) => ({
+		locale: user.locale as Locale,
+		name: user.name,
+		url,
+	})
+
 	return betterAuth({
 		secret,
 		baseURL,
 		database: drizzleAdapter(db, { provider: 'pg', schema }),
 		emailAndPassword: {
 			enabled: true,
+			// Signing in waits for the confirmed email; sign-up then answers alike for new and taken emails.
+			requireEmailVerification: true,
 			password: { hash: hashPassword, verify: verifyPassword },
+			// Whoever had the old password loses their sessions.
+			revokeSessionsOnPasswordReset: true,
+			// Better Auth only calls it when the account exists, and answers the same either way.
+			sendResetPassword: async ({ user, url }) =>
+				send('password reset', {
+					to: user.email,
+					...resetPasswordEmail(emailFor(user, url)),
+				}),
+		},
+		emailVerification: {
+			sendOnSignUp: true,
+			// A traveler who lost the link gets a new one by signing in.
+			sendOnSignIn: true,
+			autoSignInAfterVerification: true,
+			sendVerificationEmail: async ({ user, url }) =>
+				send('verification', {
+					to: user.email,
+					...verificationEmail(emailFor(user, url)),
+				}),
 		},
 		user: {
 			additionalFields: {

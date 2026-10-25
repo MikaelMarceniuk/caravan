@@ -11,7 +11,7 @@ const UUID_V7 =
 describe('POST /api/auth/sign-up/email', () => {
 	const database = useTestDatabase()
 
-	test('creates the account and signs the traveler in', async () => {
+	test('creates the account', async () => {
 		const app = createTestApp(database.db)
 		const email = uniqueEmail()
 
@@ -23,10 +23,11 @@ describe('POST /api/auth/sign-up/email', () => {
 
 		expect(response.status).toBe(200)
 		const body = (await response.json()) as { user: unknown }
-		expect(body.user).toMatchObject({ name: 'Ana', email })
-		expect(response.headers.get('set-cookie')).toContain(
-			'better-auth.session_token=',
-		)
+		expect(body.user).toMatchObject({
+			name: 'Ana',
+			email,
+			emailVerified: false,
+		})
 	})
 
 	test('gives the traveler a UUIDv7 id', async () => {

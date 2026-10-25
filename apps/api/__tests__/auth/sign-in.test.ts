@@ -3,17 +3,19 @@ import {
 	createTestApp,
 	PASSWORD,
 	postAuth,
-	signUp,
+	signUpVerified,
 	uniqueEmail,
 } from '../support/auth-app'
+import { createFakeMailer } from '../support/fake-mailer'
 import { useTestDatabase } from '../support/test-database'
 
 describe('POST /api/auth/sign-in/email', () => {
 	const database = useTestDatabase()
 
 	test('signs the traveler in with the right email and password', async () => {
-		const app = createTestApp(database.db)
-		const { email } = await signUp(app)
+		const mailer = createFakeMailer()
+		const app = createTestApp(database.db, { mailer })
+		const { email } = await signUpVerified(app, mailer)
 
 		const response = await postAuth(app, '/sign-in/email', {
 			email,
@@ -27,8 +29,9 @@ describe('POST /api/auth/sign-in/email', () => {
 	})
 
 	test('answers a wrong password and an unknown email the same way', async () => {
-		const app = createTestApp(database.db)
-		const { email } = await signUp(app)
+		const mailer = createFakeMailer()
+		const app = createTestApp(database.db, { mailer })
+		const { email } = await signUpVerified(app, mailer)
 
 		const wrongPassword = await postAuth(app, '/sign-in/email', {
 			email,
@@ -49,8 +52,9 @@ describe('POST /api/auth/sign-in/email', () => {
 	})
 
 	test('ignores the case of the email', async () => {
-		const app = createTestApp(database.db)
-		const { email } = await signUp(app)
+		const mailer = createFakeMailer()
+		const app = createTestApp(database.db, { mailer })
+		const { email } = await signUpVerified(app, mailer)
 
 		const response = await postAuth(app, '/sign-in/email', {
 			email: email.toUpperCase(),
