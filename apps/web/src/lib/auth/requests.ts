@@ -1,5 +1,5 @@
 import type { Locale } from '@/i18n/locale'
-import { api } from './api'
+import { api } from '../api'
 
 // Better Auth's endpoints, under /api/auth on the API (docs/features/auth-emails.md).
 

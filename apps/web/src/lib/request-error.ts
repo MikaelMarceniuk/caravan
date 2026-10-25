@@ -3,9 +3,14 @@ import { errorCode } from './api'
 
 type Translate = ReturnType<typeof useTranslations>
 
-/** What to tell the traveler about a failed request that no field explains. */
-export function requestErrorMessage(error: unknown, t: Translate) {
+/** The next-intl key of what to tell the traveler about a failed request that no field explains. */
+export function requestErrorKey(error: unknown) {
 	return errorCode(error) === 'TOO_MANY_REQUESTS'
-		? t('errors.tooManyRequests')
-		: t('errors.unexpected')
+		? 'errors.tooManyRequests'
+		: 'errors.unexpected'
+}
+
+/** That message, translated. */
+export function requestErrorMessage(error: unknown, t: Translate) {
+	return t(requestErrorKey(error))
 }

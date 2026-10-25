@@ -1,72 +1,60 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
-import { type FormEvent, useState } from 'react'
-import { FormAlert } from '@/components/form/form-alert'
-import { PasswordField } from '@/components/form/password-field'
-import { TextField } from '@/components/form/text-field'
-import { Button } from '@/components/ui/button'
+import { useForm, useWatch } from 'react-hook-form'
+import type { z } from 'zod'
+import { Form, SubmitButton } from '@/components/form/form'
+import {
+	FormPasswordField,
+	FormRootAlert,
+	FormTextField,
+} from '@/components/form/form-fields'
 import { FieldGroup } from '@/components/ui/field'
 import type { Locale } from '@/i18n/locale'
 import { errorCode } from '@/lib/api'
-import { PASSWORD_MIN, signUp } from '@/lib/auth'
-import { requestErrorMessage } from '@/lib/request-error'
-import { isEmail, passwordLengthError } from '@/lib/validation'
+import { PASSWORD_MIN, useSignUp } from '@/lib/auth'
+import { requestErrorKey } from '@/lib/request-error'
+import { signUpSchema } from '@/lib/schemas/auth'
 import { GoogleSignIn, NotImplementedLink } from './not-implemented'
 import { PasswordLength } from './password-length'
 
-type Fields = { name: string; email: string; password: string }
-type Errors = Partial<Record<keyof Fields, string>>
+type Values = z.infer<typeof signUpSchema>
 
 export function SignUpForm() {
 	const t = useTranslations()
 	const locale = useLocale() as Locale
-	const [email, setEmail] = useState('')
-	const [errors, setErrors] = useState<Errors>({})
-	const [formError, setFormError] = useState<string>()
-	const [password, setPassword] = useState('')
 	const router = useRouter()
-	const mutation = useMutation({
-		mutationFn: signUp,
-		onError(error, { email }) {
-			const code = errorCode(error)
-			if (
-				code === 'USER_ALREADY_EXISTS' ||
-				code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
-			)
-				return router.push(`/sign-in?${new URLSearchParams({ email })}`)
-			setFormError(requestErrorMessage(error, t))
-		},
+	const signUp = useSignUp()
+	const form = useForm<Values>({
+		resolver: zodResolver(signUpSchema),
+		defaultValues: { name: '', email: '', password: '' },
 	})
+	const password = useWatch({ control: form.control, name: 'password' })
 
-	function validate({ name, email, password }: Fields): Errors {
-		const found: Errors = {}
-		if (!name.trim()) found.name = t('errors.nameRequired')
-		if (!isEmail(email)) found.email = t('errors.emailInvalid')
-		found.password = passwordLengthError(password, t)
-		return found
+	function submit(values: Values) {
+		signUp.mutate(
+			{ ...values, locale },
+			{
+				onError(error) {
+					const code = errorCode(error)
+					// Plan A13: only reachable if the API ever tells a taken email apart.
+					if (
+						code === 'USER_ALREADY_EXISTS' ||
+						code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
+					)
+						return router.push(
+							`/sign-in?${new URLSearchParams({ email: values.email })}`,
+						)
+					form.setError('root', { message: requestErrorKey(error) })
+				},
+			},
+		)
 	}
 
-	function submit(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault()
-		const form = new FormData(event.currentTarget)
-		const fields = {
-			name: String(form.get('name')),
-			email: String(form.get('email')),
-			password: String(form.get('password')),
-		}
-		const found = validate(fields)
-		setErrors(found)
-		setFormError(undefined)
-		if (Object.values(found).some(Boolean)) return
-		setEmail(fields.email)
-		mutation.mutate({ ...fields, locale })
-	}
-
-	if (mutation.isSuccess) return <CheckYourEmail email={email} />
+	if (signUp.isSuccess) return <CheckYourEmail email={signUp.variables.email} />
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -76,30 +64,25 @@ export function SignUpForm() {
 				</h1>
 				<p className="text-muted-foreground">{t('signUp.subtitle')}</p>
 			</header>
-			<form onSubmit={submit} noValidate>
+			<Form form={form} onSubmit={submit} pending={signUp.isPending}>
 				<FieldGroup>
 					<GoogleSignIn />
-					<FormAlert message={formError} />
-					<TextField
-						id="name"
+					<FormRootAlert />
+					<FormTextField
+						name="name"
 						label={t('fields.name')}
 						autoComplete="name"
-						error={errors.name}
 					/>
-					<TextField
-						id="email"
+					<FormTextField
+						name="email"
 						label={t('fields.email')}
 						type="email"
 						autoComplete="email"
-						error={errors.email}
 					/>
-					<PasswordField
-						id="password"
+					<FormPasswordField
+						name="password"
 						label={t('fields.password')}
 						autoComplete="new-password"
-						error={errors.password}
-						value={password}
-						onChange={(event) => setPassword(event.target.value)}
 						hintId="password-hint"
 						hint={
 							<PasswordLength
@@ -109,11 +92,9 @@ export function SignUpForm() {
 							/>
 						}
 					/>
-					<Button type="submit" size="lg" disabled={mutation.isPending}>
-						{t('signUp.submit')}
-					</Button>
+					<SubmitButton>{t('signUp.submit')}</SubmitButton>
 				</FieldGroup>
-			</form>
+			</Form>
 			<p className="text-xs text-subtle">
 				{t('signUp.termsBefore')}{' '}
 				<NotImplementedLink>{t('signUp.terms')}</NotImplementedLink>{' '}

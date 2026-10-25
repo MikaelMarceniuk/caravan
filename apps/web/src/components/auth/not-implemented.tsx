@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
+import { useFormPending } from '@/components/form/form'
 import { Button } from '@/components/ui/button'
 import { FieldSeparator } from '@/components/ui/field'
 
@@ -46,6 +47,7 @@ export function GoogleSignIn() {
 				type="button"
 				variant="outline"
 				size="lg"
+				disabled={useFormPending()}
 				onClick={notImplemented}
 			>
 				<GoogleMark />

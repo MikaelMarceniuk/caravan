@@ -48,6 +48,7 @@ export function PasswordField({
 				/>
 				<InputGroupAddon align="inline-end">
 					<InputGroupButton
+						disabled={input.disabled}
 						size="icon-sm"
 						className="size-11"
 						aria-label={visible ? t('hidePassword') : t('showPassword')}

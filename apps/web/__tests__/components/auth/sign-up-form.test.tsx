@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SignUpForm } from '@/components/auth/sign-up-form'
-import { descriptionOf } from '../../support/a11y'
+import { descriptionOf, isDisabled } from '../../support/a11y'
 import { axeViolations } from '../../support/axe'
-import { fakeApi } from '../../support/fake-api'
+import { fakeApi, pendingReply } from '../../support/fake-api'
 import { navigation } from '../../support/navigation'
 import { renderUi } from '../../support/render'
 
@@ -218,5 +218,28 @@ describe('the sign-up form', () => {
 			.click(screen.getByRole('button', { name: 'Create account' }))
 
 		expect([...before, ...(await axeViolations(container))]).toEqual([])
+	})
+
+	test('turns the fields off while creating the account', async () => {
+		const reply = pendingReply()
+		fakeApi({ [SIGN_UP]: reply.route })
+		renderUi(<SignUpForm />)
+		const user = await fillIn()
+
+		await user.click(screen.getByRole('button', { name: 'Create account' }))
+
+		await waitFor(() =>
+			expect(
+				['Your name', 'Email', 'Password'].map((label) =>
+					isDisabled(screen.getByLabelText(label)),
+				),
+			).toEqual([true, true, true]),
+		)
+		expect(
+			screen
+				.getByRole('button', { name: 'Create account' })
+				.getAttribute('aria-busy'),
+		).toBe('true')
+		reply.send({ status: 200, data: {} })
 	})
 })
