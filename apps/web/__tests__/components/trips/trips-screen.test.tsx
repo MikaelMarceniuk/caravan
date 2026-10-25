@@ -62,4 +62,15 @@ describe('the trips screen', () => {
 		expect(screen.getByRole('tab', { name: 'Past 0' })).toBeTruthy()
 		expect(screen.getByText('2 coming up')).toBeTruthy()
 	})
+
+	test('tells a trip has no stops yet', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [balkans] } }),
+		})
+
+		renderTripsScreen()
+
+		const [card] = await screen.findAllByRole('article')
+		expect(card?.textContent).toContain('No stops yet')
+	})
 })

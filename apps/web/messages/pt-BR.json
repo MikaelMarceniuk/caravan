@@ -88,7 +88,8 @@
 		"title": "Suas viagens",
 		"comingUp": "{count, plural, one {# viagem pela frente} other {# viagens pela frente}}",
 		"upcoming": "Próximas",
-		"past": "Passadas"
+		"past": "Passadas",
+		"noStops": "Nenhuma parada ainda"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

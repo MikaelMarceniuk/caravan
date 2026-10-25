@@ -88,7 +88,8 @@
 		"title": "Your trips",
 		"comingUp": "{count, plural, other {# coming up}}",
 		"upcoming": "Upcoming",
-		"past": "Past"
+		"past": "Past",
+		"noStops": "No stops yet"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
