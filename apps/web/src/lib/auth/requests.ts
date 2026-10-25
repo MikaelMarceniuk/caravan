@@ -16,6 +16,12 @@ export type Traveler = {
 export const PASSWORD_MIN = 8
 export const PASSWORD_MAX = 128
 
+/** The traveler of the browser's session cookie, or null. */
+export async function fetchSession() {
+	const { data } = await api.get<{ user: Traveler } | null>('/auth/get-session')
+	return data?.user ?? null
+}
+
 export async function signUp(input: {
 	name: string
 	email: string

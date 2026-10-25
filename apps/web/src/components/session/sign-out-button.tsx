@@ -1,30 +1,40 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { signOut } from '@/lib/auth'
+import { Spinner } from '@/components/ui/spinner'
+import { useSignOut } from '@/lib/auth'
 
 export function SignOutButton() {
 	const t = useTranslations('session')
 	const router = useRouter()
-	const mutation = useMutation({
-		mutationFn: signOut,
-		onSuccess() {
-			router.replace('/sign-in')
-			// The server components read the session again, now without one.
-			router.refresh()
-		},
-	})
+	const signOut = useSignOut()
+	const pending = signOut.isPending || signOut.isSuccess
 	return (
 		<Button
 			variant="outline"
 			size="lg"
 			className="self-start"
-			disabled={mutation.isPending}
-			onClick={() => mutation.mutate()}
+			disabled={pending}
+			aria-busy={pending || undefined}
+			onClick={() =>
+				signOut.mutate(undefined, {
+					onSuccess() {
+						router.replace('/sign-in')
+						// The server components read the session again, now without one.
+						router.refresh()
+					},
+				})
+			}
 		>
+			{pending && (
+				<Spinner
+					data-icon="inline-start"
+					role="presentation"
+					aria-hidden="true"
+				/>
+			)}
 			{t('signOut')}
 		</Button>
 	)

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
 	requestPasswordReset,
 	resetPassword,
@@ -6,11 +6,14 @@ import {
 	signOut,
 	signUp,
 } from './requests'
+import { SESSION_KEY, sessionQuery } from './session-query'
 
 // Every request of the app goes through a TanStack Query hook (development.md §2, Web).
 
-/** The query key of the signed-in traveler. */
-export const SESSION_KEY = ['session'] as const
+/** The signed-in traveler: undefined while unknown, null when there is no session. */
+export function useSession() {
+	return useQuery(sessionQuery)
+}
 
 export function useSignUp() {
 	return useMutation({ mutationFn: signUp })
