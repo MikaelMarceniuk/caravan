@@ -131,4 +131,18 @@ describe('the new trip dialog', () => {
 			data: { trip: { id: TRIP_ID, name: 'Balkans Road Trip' } },
 		})
 	})
+
+	test('keeps the name and explains when creating fails', async () => {
+		await renderTripsScreen({ [CREATE_TRIP]: () => ({ status: 500 }) })
+
+		await createTrip('Balkans Road Trip')
+
+		expect((await screen.findByRole('alert')).textContent).toBe(
+			'Something went wrong. Try again.',
+		)
+		expect(screen.getByRole('dialog')).toBeTruthy()
+		expect((screen.getByLabelText('Trip name') as HTMLInputElement).value).toBe(
+			'Balkans Road Trip',
+		)
+	})
 })
