@@ -93,7 +93,9 @@
 		"planTrip": "Plan a new trip",
 		"planTripHint": "Name it, then add the stops",
 		"noPastTrips": "No past trips yet",
-		"loading": "Loading your trips…"
+		"loading": "Loading your trips…",
+		"loadFailed": "We couldn't load your trips.",
+		"tryAgain": "Try again"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

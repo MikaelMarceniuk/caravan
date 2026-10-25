@@ -3,6 +3,8 @@
 import type { TripSummary } from '@caravan/core'
 import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTrips } from '@/lib/trips'
@@ -22,13 +24,30 @@ export function TripsScreen() {
 			) : (
 				<>
 					<Title />
-					<p
-						role="status"
-						className="flex items-center gap-2 text-muted-foreground"
-					>
-						<Spinner aria-hidden="true" role="presentation" />
-						{t('loading')}
-					</p>
+					{trips.isError ? (
+						<div className="flex flex-col items-start gap-4">
+							<Alert variant="destructive">
+								<AlertDescription>{t('loadFailed')}</AlertDescription>
+							</Alert>
+							<Button
+								variant="outline"
+								size="lg"
+								disabled={trips.isFetching}
+								aria-busy={trips.isFetching || undefined}
+								onClick={() => trips.refetch()}
+							>
+								{t('tryAgain')}
+							</Button>
+						</div>
+					) : (
+						<p
+							role="status"
+							className="flex items-center gap-2 text-muted-foreground"
+						>
+							<Spinner aria-hidden="true" role="presentation" />
+							{t('loading')}
+						</p>
+					)}
 				</>
 			)}
 		</main>

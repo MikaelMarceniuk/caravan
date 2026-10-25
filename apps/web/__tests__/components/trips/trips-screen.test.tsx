@@ -111,4 +111,25 @@ describe('the trips screen', () => {
 		reply.send({ status: 200, data: { trips: [] } })
 		await screen.findByRole('tab', { name: 'Upcoming 0' })
 	})
+
+	test('offers to try again when the list fails', async () => {
+		let replies = [{ status: 500 }, { status: 200, data: { trips: [balkans] } }]
+		fakeApi({
+			[LIST_TRIPS]: () => {
+				const [reply, ...rest] = replies
+				replies = rest
+				return reply ?? { status: 500 }
+			},
+		})
+		renderTripsScreen()
+
+		expect((await screen.findByRole('alert')).textContent).toContain(
+			"We couldn't load your trips.",
+		)
+		await userEvent
+			.setup()
+			.click(screen.getByRole('button', { name: 'Try again' }))
+
+		expect(await tripNames()).toEqual(['Balkans Road Trip'])
+	})
 })

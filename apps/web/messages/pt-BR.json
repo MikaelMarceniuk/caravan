@@ -93,7 +93,9 @@
 		"planTrip": "Planejar uma viagem",
 		"planTripHint": "Dê um nome e depois adicione as paradas",
 		"noPastTrips": "Nenhuma viagem passada ainda",
-		"loading": "Carregando suas viagens…"
+		"loading": "Carregando suas viagens…",
+		"loadFailed": "Não conseguimos carregar suas viagens.",
+		"tryAgain": "Tentar de novo"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
