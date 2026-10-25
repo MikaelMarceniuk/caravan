@@ -21,7 +21,7 @@
 The auth screens redirect to `/session` when there is already a session.
 
 - **Language** (`src/proxy.ts`, `src/i18n/`): every page visit without a valid `NEXT_LOCALE` cookie gets one, from `Accept-Language` (`pt`, `pt-BR`, `pt-PT` → pt-BR; anything else → en-US). The first page already renders in it, and sign-up sends it to the API.
-- **API access** (`src/lib/api.ts`, `auth.ts`, `session.ts`): one axios instance on `/api`. In development, Next's `rewrites` send `/api/*` to `API_URL` (default `http://localhost:3000`), so the browser sees one origin, as with Caddy in production. The server forwards `x-forwarded-for`/`cf-connecting-ip` with the cookie, so the API's rate limit counts the visitor, not the Next server.
+- **API access** (`src/lib/api.ts`, `auth.ts`, `session.ts`): one axios instance on `/api`. In development, Next's `rewrites` send `/api/*` to `API_URL` (default `http://localhost:3333`), so the browser sees one origin, as with Caddy in production. The server forwards `x-forwarded-for`/`cf-connecting-ip` with the cookie, so the API's rate limit counts the visitor, not the Next server.
 - **CI:** a `web` area and job (lint, typecheck, build, test); Turbo knows the web's inputs and the `.next` output.
 
 ## Forms and queries (plan §11, revision 4)
@@ -47,7 +47,7 @@ The auth screens redirect to `/session` when there is already a session.
 
 | Topic | Where it is recorded |
 |---|---|
-| axios + TanStack Query, no Eden; dev rewrites on 3001 | `architecture.md` D42; plan B5, B6 |
+| axios + TanStack Query, no Eden; dev rewrites (web 3000, API 3333) | `architecture.md` D42; plan B5, B6 |
 | Design adaptations, the language cookie, the input outline, no `dark:` styles | `architecture.md` D43; plan B9, A14 |
 | axe in component tests; the web's test edges | `development.md` §1 and §2; plan B6, B7 |
 | No Playwright in this item | Plan B8 |
@@ -93,7 +93,7 @@ Observed on 2026-10-24: aarch64 (Asahi), Bun 1.4.3, Node 24.20.0, TypeScript 7.0
 
 ## Deviations from the plan
 
-- **`API_URL` has a default** (`http://localhost:3000`) instead of being required: Next bakes the rewrites at build time, and CI builds without one.
+- **`API_URL` has a default** (`http://localhost:3333`) instead of being required: Next bakes the rewrites at build time, and CI builds without one.
 - **The rewrites are always on:** in production Caddy routes `/api/*` before Next, so they are never reached.
 - **The Google button, Terms and Privacy** are buttons styled as links where they open nothing (B9).
 - **Next 16.4's generated `AGENTS.md`** is turned off (`agentRules: false`): the repo has its own.

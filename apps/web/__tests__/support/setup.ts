@@ -3,7 +3,7 @@ import { GlobalRegistrator } from '@happy-dom/global-registrator'
 // A DOM for the component tests (architecture.md D31). Registered before Testing Library loads.
 // Bun's own fetch classes stay: happy-dom's, like a browser's, drop the `cookie` header the proxy tests send.
 const { Request, Response, Headers, fetch } = globalThis
-GlobalRegistrator.register({ url: 'http://localhost:3001/' })
+GlobalRegistrator.register({ url: 'http://localhost:3000/' })
 Object.assign(globalThis, { Request, Response, Headers, fetch })
 
 const { afterEach, mock } = await import('bun:test')

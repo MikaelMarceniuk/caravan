@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import type { Traveler } from './auth'
 
 // Where the Next server reaches the API (in production, the internal address; never through the browser).
-const API_URL = process.env.API_URL ?? 'http://localhost:3000'
+const API_URL = process.env.API_URL ?? 'http://localhost:3333'
 
 // The client's address travels on, or the API's rate limit would count every visitor as the Next server.
 const FORWARDED = ['x-forwarded-for', 'cf-connecting-ip']

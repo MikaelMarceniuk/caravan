@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import { proxy } from '@/proxy'
 
 function visit(headers: Record<string, string> = {}) {
-	return proxy(new NextRequest('http://localhost:3001/sign-in', { headers }))
+	return proxy(new NextRequest('http://localhost:3000/sign-in', { headers }))
 }
 
 describe('the language cookie', () => {

@@ -60,7 +60,7 @@ describe('forgot password', () => {
 		expect(page.status).toBe(302)
 		// Absolute, on the web's origin (unlike the verification redirect, which is relative).
 		expect(page.headers.get('location')).toMatch(
-			/^http:\/\/localhost:3001\/reset-password\?token=[\w-]+$/,
+			/^http:\/\/localhost:3000\/reset-password\?token=[\w-]+$/,
 		)
 	})
 
