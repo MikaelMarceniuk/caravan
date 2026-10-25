@@ -1,5 +1,5 @@
 import type { TripSummary } from '@caravan/core'
-import { eq } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import type { Database } from '../db/client'
 import { tripMembers, trips } from '../db/schema'
 
@@ -22,7 +22,7 @@ export function createTrip(
 	})
 }
 
-/** The trips the traveler is a member of. */
+/** The trips the traveler is a member of, the newest first. */
 export function listTrips(
 	db: Database,
 	userId: string,
@@ -32,4 +32,5 @@ export function listTrips(
 		.from(tripMembers)
 		.innerJoin(trips, eq(trips.id, tripMembers.tripId))
 		.where(eq(tripMembers.userId, userId))
+		.orderBy(desc(trips.createdAt), desc(trips.id))
 }

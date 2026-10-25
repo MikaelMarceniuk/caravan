@@ -128,4 +128,20 @@ describe('the trips', () => {
 		expect(response.status).toBe(400)
 		expect(await response.json()).toEqual({ code: 'INVALID_INPUT' })
 	})
+
+	test('lists the newest trip first', async () => {
+		const { app, cookie } = await signedIn()
+		for (const name of ['Lisbon', 'Porto', 'Madeira']) {
+			await requestApi(app, 'POST', '/trips', { cookie, body: { name } })
+		}
+
+		const response = await requestApi(app, 'GET', '/trips', { cookie })
+		const { trips } = (await response.json()) as { trips: TripSummary[] }
+
+		expect(trips.map((trip) => trip.name)).toEqual([
+			'Madeira',
+			'Porto',
+			'Lisbon',
+		])
+	})
 })
