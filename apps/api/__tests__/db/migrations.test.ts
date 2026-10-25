@@ -64,10 +64,12 @@ describe('migrations', () => {
 			sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`,
 		)
 
-		// Better Auth's core schema.
+		// Better Auth's core schema, then the trips.
 		expect(tables.map((row) => row.table_name)).toEqual([
 			'account',
 			'session',
+			'trip_members',
+			'trips',
 			'user',
 			'verification',
 		])
