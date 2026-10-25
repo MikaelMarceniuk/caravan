@@ -2,8 +2,10 @@
 
 import type { TripSummary } from '@caravan/core'
 import { useTranslations } from 'next-intl'
+import type { ReactNode } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTrips } from '@/lib/trips'
+import { PlanTripCard } from './plan-trip-card'
 import { TripCard } from './trip-card'
 
 const NO_TRIPS: TripSummary[] = []
@@ -37,7 +39,9 @@ export function TripsScreen() {
 					</TabsList>
 				</div>
 				<TabsContent value="upcoming">
-					<TripGrid trips={upcoming} />
+					<TripGrid trips={upcoming}>
+						<PlanTripCard />
+					</TripGrid>
 				</TabsContent>
 				<TabsContent value="past">
 					<TripGrid trips={past} />
@@ -51,7 +55,13 @@ function TabCount({ count }: { count: number }) {
 	return <span className="text-xs text-muted-foreground">{count}</span>
 }
 
-function TripGrid({ trips }: { trips: TripSummary[] }) {
+function TripGrid({
+	trips,
+	children,
+}: {
+	trips: TripSummary[]
+	children?: ReactNode
+}) {
 	return (
 		<ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 			{trips.map((trip) => (
@@ -59,6 +69,7 @@ function TripGrid({ trips }: { trips: TripSummary[] }) {
 					<TripCard trip={trip} />
 				</li>
 			))}
+			{children && <li>{children}</li>}
 		</ul>
 	)
 }

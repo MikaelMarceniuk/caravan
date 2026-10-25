@@ -89,7 +89,9 @@
 		"comingUp": "{count, plural, other {# coming up}}",
 		"upcoming": "Upcoming",
 		"past": "Past",
-		"noStops": "No stops yet"
+		"noStops": "No stops yet",
+		"planTrip": "Plan a new trip",
+		"planTripHint": "Name it, then add the stops"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

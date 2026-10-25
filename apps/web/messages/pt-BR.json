@@ -89,7 +89,9 @@
 		"comingUp": "{count, plural, one {# viagem pela frente} other {# viagens pela frente}}",
 		"upcoming": "Próximas",
 		"past": "Passadas",
-		"noStops": "Nenhuma parada ainda"
+		"noStops": "Nenhuma parada ainda",
+		"planTrip": "Planejar uma viagem",
+		"planTripHint": "Dê um nome e depois adicione as paradas"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

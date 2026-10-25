@@ -73,4 +73,15 @@ describe('the trips screen', () => {
 		const [card] = await screen.findAllByRole('article')
 		expect(card?.textContent).toContain('No stops yet')
 	})
+
+	test('shows only the new trip card when there are no trips', async () => {
+		fakeApi({ [LIST_TRIPS]: () => ({ status: 200, data: { trips: [] } }) })
+
+		renderTripsScreen()
+
+		expect(
+			await screen.findByRole('button', { name: 'Plan a new trip' }),
+		).toBeTruthy()
+		expect(screen.queryAllByRole('article')).toEqual([])
+	})
 })
