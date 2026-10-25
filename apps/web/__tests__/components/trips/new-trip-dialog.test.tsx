@@ -4,8 +4,8 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
-import { descriptionOf } from '../../support/a11y'
-import { fakeApi } from '../../support/fake-api'
+import { descriptionOf, isDisabled } from '../../support/a11y'
+import { fakeApi, pendingReply } from '../../support/fake-api'
 import { renderUi, testQueryClient } from '../../support/render'
 
 const ana: Traveler = {
@@ -109,5 +109,26 @@ describe('the new trip dialog', () => {
 		expect(sentBesidesTheList(api)).toEqual([
 			{ route: CREATE_TRIP, body: { name: 'Balkans Road Trip' } },
 		])
+	})
+
+	test('turns the form off while creating', async () => {
+		const reply = pendingReply()
+		await renderTripsScreen({ [CREATE_TRIP]: reply.route })
+
+		await createTrip('Balkans Road Trip')
+
+		const create = screen.getByRole('button', { name: 'Create trip' })
+		await waitFor(() => expect(create.getAttribute('aria-busy')).toBe('true'))
+		expect(
+			[
+				screen.getByLabelText('Trip name'),
+				screen.getByRole('button', { name: 'Cancel' }),
+				create,
+			].map(isDisabled),
+		).toEqual([true, true, true])
+		reply.send({
+			status: 201,
+			data: { trip: { id: TRIP_ID, name: 'Balkans Road Trip' } },
+		})
 	})
 })
