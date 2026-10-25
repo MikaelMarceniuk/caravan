@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { createApp } from '../../src/app'
 import { createDb } from '../../src/db/client'
+import { createTestApp } from '../support/auth-app'
 import { useTestDatabase } from '../support/test-database'
 
 // Nothing listens on port 1: connections to it are refused.
@@ -11,7 +11,7 @@ describe('GET /healthz', () => {
 	test('reports the process as alive without touching Postgres', async () => {
 		const db = createDb(UNREACHABLE_DATABASE_URL)
 
-		const response = await createApp({ db }).handle(
+		const response = await createTestApp(db).handle(
 			new Request('http://localhost/healthz'),
 		)
 
@@ -24,7 +24,7 @@ describe('GET /ready', () => {
 	const database = useTestDatabase()
 
 	test('is ready when Postgres answers', async () => {
-		const response = await createApp({ db: database.db }).handle(
+		const response = await createTestApp(database.db).handle(
 			new Request('http://localhost/ready'),
 		)
 
@@ -37,7 +37,7 @@ describe('GET /ready without Postgres', () => {
 	test('is not ready when Postgres does not answer', async () => {
 		const db = createDb(UNREACHABLE_DATABASE_URL)
 
-		const response = await createApp({ db }).handle(
+		const response = await createTestApp(db).handle(
 			new Request('http://localhost/ready'),
 		)
 

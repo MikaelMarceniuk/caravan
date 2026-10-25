@@ -87,6 +87,7 @@ These seams are the default reference for tests. A task that uses a listed seam,
 | `packages/core` | `decide()` and the mutations of each op | Pure functions: input → output, no mocks |
 | `packages/sync` | The package's public API | `Transport`/`Storage`/`Clock` ports with fakes |
 | `apps/api` | WS and REST | Real API + Postgres + Redis from the compose file |
+| `apps/api` migrations | The migrations folder and the Drizzle schema | Applied to a real, empty Postgres; schema × migrations through `drizzle-kit/api`; the additive policy (`deploy.md` P11) as a pure function tested with literal SQL |
 | `apps/web` | What the user sees | `bun test` + Testing Library + happy-dom, querying by role and label (which also enforces accessibility) |
 | Flows | Browser | Playwright |
 
