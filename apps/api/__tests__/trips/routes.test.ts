@@ -80,4 +80,28 @@ describe('the trips', () => {
 		expect(response.status).toBe(422)
 		expect(await response.json()).toEqual({ code: 'INVALID_INPUT' })
 	})
+
+	test('accepts a name of exactly 120 characters', async () => {
+		const { app, cookie } = await signedIn()
+
+		const response = await requestApi(app, 'POST', '/trips', {
+			cookie,
+			body: { name: 'a'.repeat(120) },
+		})
+
+		expect(response.status).toBe(201)
+	})
+
+	test('saves the name without the spaces around it', async () => {
+		const { app, cookie } = await signedIn()
+
+		const response = await requestApi(app, 'POST', '/trips', {
+			cookie,
+			body: { name: '  Balkans Road Trip  ' },
+		})
+
+		expect(await response.json()).toMatchObject({
+			trip: { name: 'Balkans Road Trip' },
+		})
+	})
 })
