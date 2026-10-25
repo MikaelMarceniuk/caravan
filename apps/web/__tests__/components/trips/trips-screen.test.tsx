@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
 import type { Locale } from '@/i18n/locale'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
+import { axeViolations } from '../../support/axe'
 import { fakeApi, pendingReply } from '../../support/fake-api'
 import { navigation } from '../../support/navigation'
 import { renderUi, testQueryClient } from '../../support/render'
@@ -218,5 +219,18 @@ describe('the trips screen', () => {
 		renderTripsScreen({ locale: 'pt-BR' })
 
 		expect(await screen.findByText('2 viagens pela frente')).toBeTruthy()
+	})
+
+	test('has no accessibility violations, in both tabs', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [balkans, japan] } }),
+		})
+		const { container } = renderTripsScreen()
+		await screen.findAllByRole('article')
+		const upcoming = await axeViolations(container)
+
+		await userEvent.setup().click(screen.getByRole('tab', { name: 'Past 0' }))
+
+		expect([...upcoming, ...(await axeViolations(container))]).toEqual([])
 	})
 })

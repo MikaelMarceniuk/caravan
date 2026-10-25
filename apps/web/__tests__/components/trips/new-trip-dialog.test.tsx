@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
 import { descriptionOf, isDisabled } from '../../support/a11y'
+import { axeViolations } from '../../support/axe'
 import { fakeApi, pendingReply } from '../../support/fake-api'
 import { navigation } from '../../support/navigation'
 import { renderUi, testQueryClient } from '../../support/render'
@@ -180,5 +181,24 @@ describe('the new trip dialog', () => {
 		await createTrip('Balkans Road Trip')
 
 		await waitFor(() => expect(navigation.visited()).toEqual(['/sign-in']))
+	})
+
+	test('has no accessibility violations, errors shown or not', async () => {
+		await renderTripsScreen()
+		await userEvent
+			.setup()
+			.click(screen.getByRole('button', { name: 'New trip' }))
+		// Only the dialog: Radix hides the screen behind it (aria-hidden) and keeps the focus inside, so axe's
+		// aria-hidden-focus on the screen is the modal working. The screen has its own axe test.
+		const before = await axeViolations(screen.getByRole('dialog'))
+
+		await userEvent
+			.setup()
+			.click(screen.getByRole('button', { name: 'Create trip' }))
+
+		expect([
+			...before,
+			...(await axeViolations(screen.getByRole('dialog'))),
+		]).toEqual([])
 	})
 })
