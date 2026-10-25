@@ -1,5 +1,6 @@
 'use client'
 
+import { TRIP_NAME_MAX } from '@caravan/core'
 import { useTranslations } from 'next-intl'
 import type { ComponentProps } from 'react'
 import { get, useFormContext, useFormState } from 'react-hook-form'
@@ -14,7 +15,11 @@ function useErrorText() {
 	const t = useTranslations()
 	return (key: unknown) =>
 		typeof key === 'string' && key
-			? t(key, { minimum: PASSWORD_MIN, maximum: PASSWORD_MAX })
+			? t(key, {
+					minimum: PASSWORD_MIN,
+					maximum: PASSWORD_MAX,
+					tripNameMax: TRIP_NAME_MAX,
+				})
 			: undefined
 }
 

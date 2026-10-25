@@ -12,6 +12,8 @@
 		"db:migrate": "bun src/db/migrate-cli.ts"
 	},
 	"dependencies": {
+		"@caravan/core": "workspace:*",
+		"@sinclair/typebox": "0.34.52",
 		"better-auth": "1.7.12",
 		"drizzle-orm": "0.45.4",
 		"elysia": "1.4.30"

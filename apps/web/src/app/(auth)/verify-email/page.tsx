@@ -10,7 +10,7 @@ export default async function VerifyEmailPage({
 }: {
 	searchParams: Promise<SearchParams>
 }) {
-	if (!(await searchParams).error) redirect('/session')
+	if (!(await searchParams).error) redirect('/trips')
 	return (
 		<AuthLayout>
 			<VerifyEmailFailed />

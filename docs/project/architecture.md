@@ -1,7 +1,7 @@
 # Caravan — Architecture
 
 > Technical reference document. Product, scope and roadmap are in [`planner.md`](./planner.md); the screens, in [`design/`](../design).
-> Last revised: 2026-10-24. Domain vocabulary: [`CONTEXT.md`](../../CONTEXT.md).
+> Last revised: 2026-10-25. Domain vocabulary: [`CONTEXT.md`](../../CONTEXT.md).
 
 ---
 
@@ -37,7 +37,7 @@
 | D26 | **`Place` = `{ name, lat, lon, countryCode, osmId }`**, stored whole in `place_json` from v1 | `lat/lon` is the format of every open-source map (MapLibre, Leaflet, OpenLayers) and every OSM tile source: the map can be swapped with no migration. Photon already returns everything, so storing it before the map exists costs nothing |
 | D27 | **Map with MapLibre GL JS + OpenFreeMap tiles**; no Google Maps, no fallback and no tile server of our own | All open source, free and keyless; the library runs in the browser, so there is no container. Changing the tile source later means changing a URL in the style |
 | D28 | **UUIDv7 IDs, `uuid` column**: what is born on the client (stops, activities, `opId`) uses `core`'s `newId()` (the `uuid` lib, `v7()`); what the server creates (users, trips, email invites) uses Postgres's `DEFAULT uuidv7()`. The server validates every ID coming from the client (section 18) | The `opId` must be born on the client for resends to be idempotent (D16), and so must the entity ID, so the optimistic UI doesn't have to swap temporary IDs. One function in the browser, in Bun and in RN; v7 is time-ordered, so INSERTs go to the end of the index |
-| D29 | **Zod 4 validation everywhere**: schemas live in `core` and are used for WS ops and messages, for Elysia's REST routes (through Standard Schema; the Eden client part is superseded by D42, with Eden inferring the types) and for the clients. No Elysia `t` (TypeBox) | One library, readable for anyone reading the repo. Zod doesn't generate code with `new Function`, so it runs the same in Bun, in a browser with a strict CSP and in React Native. TypeBox's speed advantage is microseconds before the lock, against milliseconds for the transaction. If the M2 microbenchmark shows a cost on cursors, only that message gets a hand-written check. To verify during the API setup (M1): Eden infers the types and OpenAPI comes out right with Zod; if not, REST goes back to `t` |
+| D29 | **Zod 4 validation, except for REST route bodies**: schemas live in `core` and are used for WS ops and messages and for the clients; the API may use Zod anywhere else. ~~Elysia's REST routes through Standard Schema; no Elysia `t` (TypeBox)~~ **Revised on 2026-10-25 by the project owner: REST route input (`body`, `query`, `params`, `headers`) is validated with Elysia's `t` (TypeBox)**, and route files never import Zod, fed by limits exported from `core` (development.md §2, API). The Eden client part is superseded by D42 | One library, readable for anyone reading the repo. Zod doesn't generate code with `new Function`, so it runs the same in Bun, in a browser with a strict CSP and in React Native. TypeBox's speed advantage is microseconds before the lock, against milliseconds for the transaction. If the M2 microbenchmark shows a cost on cursors, only that message gets a hand-written check. ~~To verify during the API setup (M1): Eden infers the types and OpenAPI comes out right with Zod; if not, REST goes back to `t`~~ (moot: REST input uses `t`, the native format of Elysia's validation and OpenAPI) |
 | D30 | **`Bun.sql` driver** under Drizzle, **pool of 10 connections per API instance**; an op waits **up to 2 s** for a free connection and then gets `busy` (transient); **5 s timeout** per transaction in Postgres. Depends on the M1 spike; plan B: `postgres.js` | Only the API (Bun) touches the database, so the native driver has no compatibility issue and adds no dependency. At ~1–2 ms per op, 10 connections handle thousands of ops/s; 2 × 10 + migrations + backup + Postgres's reserve ≈ 26 of `max_connections=50`, and a bigger pool only spends memory and contends for the 2 vCPUs. The timeout keeps a stuck transaction from holding the trip lock. `Bun.sql`'s API follows `postgres.js`'s and Drizzle hides the driver, so switching is cheap |
 | D31 | **Web stack**: Next.js 16 (Active LTS, exact version pinned); Tailwind 4 + shadcn/ui on **Radix**; `packages/tokens` in TS generates the theme CSS; component tests with **`bun test` + Testing Library + happy-dom**; Node 24 (`mise.toml` locally, `node:24-slim` in production) | Next 16 is the actively supported version (15 leaves maintenance in Oct/2026). shadcn copies the components into the repo, and Radix provides accessibility (keyboard, focus, screen reader). TS `tokens` are a single source for web and RN, and the AA contrast test runs on them. One test runner for the whole repo, with the same command locally and on GitHub Actions; whatever needs a real browser goes to Playwright. Node 22 leaves maintenance in Apr/2027 |
 | D32 | **Bun cryptography**: passwords with `Bun.password`'s **argon2id** (19 MiB, 2 iterations) plugged into Better Auth (`emailAndPassword.password.hash/verify`); WS ticket signed with **HMAC-SHA256** (`Bun.CryptoHasher`, secret in `.env`, constant-time comparison); invite token generated with `crypto.getRandomValues` and stored as is | argon2id is OWASP's first recommendation, and switching before the first user avoids rehashing. Bun's default (64 MiB per hash) would take down the 256 MB container with 4 simultaneous sign-ins; 19 MiB/2 is OWASP's minimum. Any instance can check the signed ticket without looking anything up, so the WS accepts connections with Redis down (as in D24); reusing a ticket within its 60 s is acceptable over HTTPS. The invite token is stored as is because the Invite screen shows the link all the time ("Copy link") |
@@ -50,8 +50,10 @@
 | D39 | **Versions of the API stack**: Drizzle's stable line (`drizzle-orm` 0.45, `drizzle-kit` 0.31) and Elysia's latest release (1.4), each pinned exactly | Drizzle 1.0 is still a release candidate and changes the migrations folder format (`drizzle-kit up` converts it later). Elysia has no LTS or published support policy, and 2.0 is a rewrite still in RC: the app stays thin until it ships |
 | D40 | **Better Auth configuration**: email and password with Better Auth's limits (8 to 128 characters); passwords through D32; ids generated by Postgres (`generateId: false` + `DEFAULT uuidv7()`, uuid columns); `user.locale` optional at sign-up with `en-US` as the fallback (`NOT NULL DEFAULT 'en-US'`), and any value other than `pt-BR`/`en-US` rejected with `INVALID_LOCALE`; Better Auth's rate limit on in every environment, in memory (one instance until M5), with its own rules (sign-in/sign-up: 3 per address every 10 s); `baseURL` is the web's public origin. Clients read the `code` of an error and ignore its English `message` | The ids follow D28 and the hash follows D32 without a second format. Better Auth types the `locale` enum but doesn't check it at runtime, so a database hook does. The rate limit is the same in tests and production; its counters move to Redis with the second instance. With one origin (P2), email links and cookies belong to the web's address |
 | D41 | **Auth emails through a `Mailer` port**: verification is required to sign in (sign-up sends the link, signing in with the right password sends a new one, the link signs the traveler in), and forgot password signs out every session. The API calls Resend's REST API with `fetch` (no SDK); tests use a fake `Mailer`. Templates are plain HTML + text written in TS, in the recipient's `user.locale`. Sending is never awaited. At most 3 emails per address an hour, verification and reset together, in memory; over it, nothing is sent and the answer doesn't change. Sender: `onboarding@resend.dev` until the domain is verified | Resend is an external service, the one edge these flows have, so it is the only fake. Not awaiting keeps the provider's latency from telling whether an account exists (Better Auth's advice), and with required verification, sign-up answers alike for new and taken emails. Two plain emails don't justify React in the API. The per-address limit stops anyone from flooding an inbox from many IPs, which the per-IP rate limit alone allows |
-| D42 | **The web talks to the API with axios + TanStack Query**, with no Eden and no Better Auth client: one axios instance on `/api` (same origin), one function per endpoint, `useMutation`/`useQuery` in the screens; response types come from `core`'s Zod schemas (D29). The server components read the session by forwarding the request's cookie (and the client's address) to `${API_URL}/api/auth/get-session`, and hand it to the client's `useSession()` query (`HydrationBoundary`), which keeps it fresh: 30 s fresh, then every 60 s while the tab is visible, on focus and on reconnect; a refresh with no session sends the page to `/sign-in`. Forms are react-hook-form + zod, with every control off and a busy submit button while sending (development.md §2, Web). In development the web runs on port 3000 and Next's `rewrites` send `/api/*` to the API on 3333, so the browser sees one origin, as with Caddy (P2); `BETTER_AUTH_URL` is the web's origin | One HTTP client for auth and REST, chosen by the project owner. Tests replace the axios adapter at the network edge (development.md §2). With one origin in development too, cookies, email links and redirects behave as in production |
+| D42 | **The web talks to the API with axios + TanStack Query**, with no Eden and no Better Auth client: one axios instance on `/api` (same origin), one function per endpoint, `useMutation`/`useQuery` in the screens; response types come from `core` (TypeScript types, such as `TripSummary`). The server components read the session by forwarding the request's cookie (and the client's address) to `${API_URL}/api/auth/get-session`, and hand it to the client's `useSession()` query (`HydrationBoundary`), which keeps it fresh: 30 s fresh, then every 60 s while the tab is visible, on focus and on reconnect; a refresh with no session sends the page to `/sign-in`. Forms are react-hook-form + zod, with every control off and a busy submit button while sending (development.md §2, Web). In development the web runs on port 3000 and Next's `rewrites` send `/api/*` to the API on 3333, so the browser sees one origin, as with Caddy (P2); `BETTER_AUTH_URL` is the web's origin | One HTTP client for auth and REST, chosen by the project owner. Tests replace the axios adapter at the network edge (development.md §2). With one origin in development too, cookies, email links and redirects behave as in production |
 | D43 | **The auth screens follow SignIn.png/SignUp.png with these changes**: "Continue with Google" and the Terms/Privacy links stay and show a "not implemented yet" toast (shadcn's `Sonner`); the magic link and the invite card go; the strength meter only measures the way to the 8-character minimum; screens with no design (forgot and reset password, the confirmation result, the session page) are kept simple. Every visit stores the language in the `NEXT_LOCALE` cookie, signed in or not, and sign-up sends it as `user.locale` (complements D35). Inputs get an outline of `#6b6980` instead of the design's `#30303d`, which had 1.42:1 against the page (WCAG 1.4.11 asks 3:1). shadcn's `dark:` styles never apply: the tokens are already the dark theme | Decided by the project owner (plan 4, B9, A14). The input outline is the only color that differs from the design, caught by the tokens' AA test |
+| D44 | **The trip's dates are derived from its stops**: from the first `arriveDate` to the last `leaveDate` of the stops not deleted, and none while the trip has no stops. `trips` has no date columns, NewTrip asks only for the name (the first stop comes in M2), and `trip.update` changes only the name. Stops only keep the D14 invariants (`arriveDate < leaveDate`, no overlap); `outside_trip` and the "stop outside the trip" warning go away. A gap is a run of dates between two stops with none | Decided by the project owner (open-topics item 2, option A, plan 5). One rule instead of two that disagreed (a `trip.update` leaving stops outside was accepted while a `stop.create` outside was rejected), and days already belong to stops (D12), so a trip with no stops had nothing to show in its dates. In M1 no trip has stops, so the API sends no dates; M2 adds `dates: { start, end } | null` to the trip summary (additive, P7) |
+| D45 | **REST conventions**: our routes answer under `/api/*` (Better Auth keeps `/api/auth/*`, deploy.md §2), one Elysia plugin per area in `src/<area>/routes.ts`. A route that needs a session declares `{ traveler: true }`, a macro of the session plugin (`src/auth/session.ts`) that reads Better Auth's session from the request's headers and hands the handler `traveler.id`; with no session it answers **401 `{ code: "UNAUTHORIZED" }`**. Input that fails the `t` schema answers **422** and a body that can't be parsed **400**, both `{ code: "INVALID_INPUT" }`. Who owns or is a member always comes from the session, never from the body (fields the schema doesn't declare are dropped). Responses are wrapped (`{ trips: [...] }`, `{ trip }`), and a create answers 201 | Codes in capitals, like Better Auth's, which the web already reads (D34, D40). One macro for every route that needs a session: M2's `/ws-ticket` and M4's members reuse it. A wrapped response grows new fields without breaking older clients (P7) |
 
 ---
 
@@ -110,7 +112,7 @@ In `core`, the rule is enforced by tooling: its `tsconfig.json` declares `lib: [
 ## 3. Domain model
 
 ```
-Trip        id, name, startDate, endDate, ownerId
+Trip        id, name, ownerId                          — dates derived from the stops (D44): first arriveDate → last leaveDate, none without stops
 Member      tripId, userId, role (owner|editor), color, lastSeenAt
 Stop        id, name, place, countryCode, arriveDate, leaveDate, color, transportIn (train|flight|ferry|bus|car|null)
 Day         (stopId, dayIndex), title                   — exists implicitly for each day of the stop (0..nights-1)
@@ -121,10 +123,9 @@ Place       name, lat, lon, countryCode, osmId          — a value (not an enti
 ```
 
 **Invariants** (validated in `core`):
-- Stops stay within the trip's dates, `arriveDate < leaveDate`, and **never overlap** (half-open interval `[arrive, leave)`). A **hard** invariant (D14): a `stop.create`/`stop.update` that breaks it is rejected (`stop_overlap` / `outside_trip`) and the UI reopens the form with what was typed.
-- Activities and day titles belong to a stop (D12). A date with no stop = a "gap" in the Overview, with no Board and no activities. Activities can only be created on a stop **already confirmed** by the server (a new stop's Board opens after the `ack`).
+- Stops have `arriveDate < leaveDate` and **never overlap** (half-open interval `[arrive, leave)`). A **hard** invariant (D14): a `stop.create`/`stop.update` that breaks it is rejected (`stop_overlap`) and the UI reopens the form with what was typed. The trip has no dates of its own (D44), so a stop can't fall outside it.
+- Activities and day titles belong to a stop (D12). Dates between two stops with no stop in them = a "gap" in the Overview, with no Board and no activities. Activities can only be created on a stop **already confirmed** by the server (a new stop's Board opens after the `ack`).
 - Stop ops **never rewrite** activities' `dayIndex` (D13). An activity with `dayIndex ≥ the stop's nights` is **outside the dates**: it shows in the Board's "Outside the stop's dates" section and in a warning in the Overview; extending the stop again brings it back. Shortening or shifting a stop is always accepted; there is no `stop_has_cards`.
-- `trip.update` is always accepted: a stop left outside the trip's new dates becomes a warning in the Overview, not a rejection.
 - `stop.delete` soft-deletes the stop **and its activities in the same op**; `stop.restore` restores only the activities deleted by that op (`deletedVersion`). If the stop's dates were taken in the meantime, `stop.restore` is rejected (`stop_overlap`) and the UI offers to restore with new dates.
 - Editing or moving a deleted entity → rejected (`deleted`); the UI shows the toast with *Restore with my change* from the in-memory draft (section 7).
 
@@ -137,7 +138,7 @@ Place       name, lat, lon, countryCode, osmId          — a value (not an enti
 
 ```ts
 type Op =
-  | { type: "trip.update";  fields: Partial<{ name: string; dates: { start: ISODate; end: ISODate } }> }
+  | { type: "trip.update";  fields: Partial<{ name: string }> }   // no dates: they come from the stops (D44)
   | { type: "stop.create";  stopId: Id; name: string; place: Place; dates: DateRange; color: StopColor; transportIn: Transport | null }
   | { type: "stop.update";  stopId: Id; fields: Partial<{ name; place; dates; color; transportIn }> }
   | { type: "stop.delete";  stopId: Id }
@@ -233,7 +234,7 @@ receive op
 
 The lock is per `trips` row: different trips never contend for the same lock.
 
-**Single decision per `opId` (D16):** every op that reaches the transaction gets a receipt, accepted or rejected. Resends (after a dropped connection) always get the same response. Final rejections: `forbidden`, `locked`, `deleted`, `stop_overlap`, `outside_trip`. (`locked` is final for that op; the draft stays on screen and the person tries again when the lock is released, generating a new op.) Transient ones (no receipt, before BEGIN): rate limit, size, schema, server busy.
+**Single decision per `opId` (D16):** every op that reaches the transaction gets a receipt, accepted or rejected. Resends (after a dropped connection) always get the same response. Final rejections: `forbidden`, `locked`, `deleted`, `stop_overlap`. (`locked` is final for that op; the draft stays on screen and the person tries again when the lock is released, generating a new op.) Transient ones (no receipt, before BEGIN): rate limit, size, schema, server busy.
 
 ---
 
@@ -241,7 +242,7 @@ The lock is per `trips` row: different trips never contend for the same lock.
 
 There are no write conflicts: **only one person edits a thing at a time**. Consistency across ops is still guaranteed by Postgres (version + `FOR UPDATE`); the edit lock is the UX guarantee that nobody overwrites what someone else is editing.
 
-**Granularity: entity.** Activity, stop, day title (`stopId + dayIndex`) and trip header (name and dates). The "editing field X" indicator stays in presence (section 8), but the lock covers the whole entity.
+**Granularity: entity.** Activity, stop, day title (`stopId + dayIndex`) and trip header (the name; its dates come from the stops, D44). The "editing field X" indicator stays in presence (section 8), but the lock covers the whole entity.
 
 | UI action | Lock |
 |---|---|
@@ -266,7 +267,7 @@ There are no write conflicts: **only one person edits a thing at a time**. Consi
 
 **Remaining rejections and what the UI does** (the user's content is still in memory):
 - `deleted` (the entity was deleted by a `stop.delete` cascade): toast "Leo deleted this stop · Restore with my change".
-- `stop_overlap` / `outside_trip`: the stop form reopens with the data and the warning.
+- `stop_overlap`: the stop form reopens with the data and the warning.
 - `locked`: toast "Ana is editing this"; the draft stays in the field until the lock is released.
 - `forbidden`: a notice, and the user leaves the trip.
 
@@ -337,7 +338,7 @@ interface Clock     { now(); setTimeout(...) }          // fake in tests
 -- Better Auth manages: user, session, account, verification (IDs from the database's DEFAULT uuidv7(), D40)
 -- user gets a `locale` additional field ('pt-BR' | 'en-US', D35; NOT NULL DEFAULT 'en-US', D40)
 -- Every id is a uuid (UUIDv7, D28): DEFAULT uuidv7() for what the server creates; what comes from the client arrives filled in
-trips          (id, name, start_date, end_date, owner_id, current_version, created_at, deleted_at)
+trips          (id, name, owner_id, current_version, created_at, deleted_at)           no dates: derived from the stops (D44)
 trip_members   (trip_id, user_id, role, color, joined_at, last_seen_at)              PK (trip_id, user_id)
 invite_links   (token PK, trip_id, role, created_by, expires_at, revoked_at)
 invite_emails  (id, trip_id, email, role, invited_by, created_at, accepted_at, declined_at)
@@ -374,7 +375,7 @@ op_receipts    (op_id PK, trip_id, user_id, outcome, version, reason, created_at
 
 ```
 apps/api/src/
-  auth/        Better Auth mounted at /api/auth/*, /ws-ticket
+  auth/        Better Auth mounted at /api/auth/*, the session macro for our routes (D45), /ws-ticket
   trips/       trip CRUD (creation produces trip + owner + v0), members, roles
   invites/     links (create, reset, accept), emails (send, resend, accept, decline)
   places/      Photon proxy + 24h Redis cache + per-user rate limit
@@ -426,7 +427,7 @@ A checklist so no doors close now:
 
 - **Documents/attachments** (CardSheet → Documents, "Today's documents", offline per stop/trip, Wi-Fi only, "S3 presigned uploads"). In v2: R2 (production)/MinIO (local), presign → PUT → `attachment.add` op.
 - **Android** ("Get it on Android" on the landing page).
-- Screens to adjust in the MVP: in SignIn/SignUp, remove "Email me a sign-in link instead"; "Continue with Google" stays and shows "not implemented yet" until OAuth arrives (D43); remove the Documents section from the CardSheet; the "Save X offline" buttons, OfflineStop and TripOffline go away; the offline indicator in the trip list goes away (the plan can always be read offline); the conflict screens (ConflictChanges, ConflictDeleted, ConflictField) go away: they become the "Ana is editing" lock and toasts; the Offline screen becomes the "viewing only" banner; the landing page replaces "Web + Android" and the "S3 presigned uploads" and "Docker · nginx" chips (now Caddy); "2 API instances behind nginx" becomes "behind Caddy".
+- Screens to adjust in the MVP: in SignIn/SignUp, remove "Email me a sign-in link instead"; "Continue with Google" stays and shows "not implemented yet" until OAuth arrives (D43); remove the Documents section from the CardSheet; the "Save X offline" buttons, OfflineStop and TripOffline go away; the offline indicator in the trip list goes away (the plan can always be read offline); NewTrip loses Starts/Ends and the nights count, and EmptyTrip's "14 nights to plan" goes away, because the trip's dates come from its stops (D44); the conflict screens (ConflictChanges, ConflictDeleted, ConflictField) go away: they become the "Ana is editing" lock and toasts; the Offline screen becomes the "viewing only" banner; the landing page replaces "Web + Android" and the "S3 presigned uploads" and "Docker · nginx" chips (now Caddy); "2 API instances behind nginx" becomes "behind Caddy".
 
 ---
 
@@ -509,7 +510,6 @@ A checklist so no doors close now:
 | Adding or extending a stop over a taken period: push the following ones, only fill gaps, or ask? | **Before M2** (Overview UI) | UX only: the invariant is already hard (D14). Pushing would be an explicit op (`stops.shift`), cheap thanks to D12 |
 | Phone screens in the design | **Before M2** | The current design is desktop-only (1440 px) |
 | Transport as an entity (departure and arrival times, origin and destination time zones) | v2 | Today it is just the icon in `stop.transportIn` |
-| Trip date asymmetry: a `trip.update` that leaves stops outside is accepted (warning), but a `stop.create` outside the trip is rejected (D14). Derive the trip dates from the stops? | When the `trips` schema is built (M1) | Acceptable for now: each op only validates what it changes |
 | Edit lock: the 15 s TTL and 2 min inactivity are starting defaults | M4 | Adjust with real use; see section 7 |
 | **Viewer** role (read-only) | v2 | Doesn't change the architecture: `decide` already checks the role inside the transaction (D18) |
 

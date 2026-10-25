@@ -25,7 +25,7 @@
 
 - **Semantic HTML first:** `button`, `a`, `label`, `nav`, `main`, headings in order. ARIA only when native HTML can't do it.
 - **Keyboard:** everything works without a mouse, focus is always visible, focus order is logical. Sheets and dialogs trap focus, close with `Esc` and return focus to whatever opened them.
-- **Forms:** every field has a `label`; errors are tied to the field (`aria-describedby`) and announced. This also covers server rejections (`stop_overlap`, `outside_trip`), when the form reopens with the user's data.
+- **Forms:** every field has a `label`; errors are tied to the field (`aria-describedby`) and announced. This also covers server rejections (`stop_overlap`), when the form reopens with the user's data.
 - **Real time:** relevant remote changes are announced through `aria-live="polite"`, throttled. A remote change never steals focus from someone who is editing.
 - **Color:** AA contrast checked in the `tokens`, including text on the stop colors. Color is never the only signal (a member has a color **and** initials or a name).
 - **Motion:** animations respect `prefers-reduced-motion`.
@@ -89,12 +89,20 @@ These seams are the default reference for tests. A task that uses a listed seam,
 | `apps/api` | WS and REST | Real API + Postgres + Redis from the compose file |
 | `apps/api` migrations | The migrations folder and the Drizzle schema | Applied to a real, empty Postgres; schema × migrations through `drizzle-kit/api`; the additive policy (`deploy.md` P11) as a pure function tested with literal SQL |
 | `apps/web` | What the user sees | `bun test` + Testing Library + happy-dom, querying by role and label (which also enforces accessibility). The network edge is the axios instance's adapter (`__tests__/support/fake-api.ts`) and `next/navigation` gets a stand-in; server components stay thin and are checked by hand |
+| Flows | Browser | Playwright |
+
+**API, by default** (`architecture.md` D29):
+
+- Everything an Elysia route validates (`body`, `query`, `params` and `headers`) is declared on the route with Elysia's `t` (TypeBox): `body: t.Object({ ... })`. Never Zod for route input. Response schemas are not declared for now.
+- Routes live in `routes.ts` files (`src/<area>/routes.ts`), and those files never import `zod`.
+- Limits the clients share (e.g. the length of a name) come from `core` as constants and feed the `t` schema, so the route and the web form use the same numbers without sharing a schema.
+- Zod is still fine everywhere else in the API: WS ops and messages (the schemas in `core`), and any other parsing that is not route input.
+- Input that fails validation or can't be parsed answers with a code, never with the validator's message (D34).
 
 **Web, by default** (Biome enforces the imports in `apps/web/biome.json`):
 
 - Every form is a `Form` (`src/components/form/form.tsx`): react-hook-form with a zod schema from `src/lib/schemas/`, fields from `form-fields.tsx`, and a `SubmitButton`. While the request is on its way, every control is off and the button shows a spinner with `aria-busy`. Our controls read `useFormPending()`, because happy-dom ignores a disabled fieldset.
 - Every request goes through a TanStack Query hook in `src/lib/` (`useMutation`/`useQuery`). Only `src/lib/**` imports `axios` or the `api` instance; only the form components and `*-form.tsx` import `react-hook-form`.
-| Flows | Browser | Playwright |
 
 Ask the project owner before writing the tests that depend on the choice of seam when:
 

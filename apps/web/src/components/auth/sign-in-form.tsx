@@ -58,7 +58,7 @@ export function SignInForm({
 		signIn.mutate(values, {
 			onSuccess(traveler) {
 				storeLocale(traveler.locale)
-				router.push('/session')
+				router.push('/trips')
 			},
 			onError: (error) =>
 				form.setError('root', { message: signInErrorKey(error) }),
@@ -78,7 +78,7 @@ export function SignInForm({
 					<AlertDescription>{t('signIn.passwordChanged')}</AlertDescription>
 				</Alert>
 			)}
-			{/* Still pending after success: the page is on its way to /session. */}
+			{/* Still pending after success: the page is on its way to /trips. */}
 			<Form
 				form={form}
 				onSubmit={submit}

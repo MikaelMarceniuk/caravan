@@ -14,6 +14,8 @@
     "apps/api": {
       "name": "@caravan/api",
       "dependencies": {
+        "@caravan/core": "workspace:*",
+        "@sinclair/typebox": "0.34.52",
         "better-auth": "1.7.12",
         "drizzle-orm": "0.45.4",
         "elysia": "1.4.30",
@@ -25,6 +27,7 @@
     "apps/web": {
       "name": "@caravan/web",
       "dependencies": {
+        "@caravan/core": "workspace:*",
         "@caravan/tokens": "workspace:*",
         "@hookform/resolvers": "6.0.0",
         "@tanstack/react-query": "5.104.5",

@@ -26,7 +26,9 @@
 		"tooManyRequests": "Muitas tentativas. Espere um pouco e tente de novo.",
 		"unexpected": "Algo deu errado. Tente de novo.",
 		"passwordRequired": "Informe a sua senha.",
-		"wrongCredentials": "Email ou senha incorretos."
+		"wrongCredentials": "Email ou senha incorretos.",
+		"tripNameRequired": "Dê um nome à viagem.",
+		"tripNameTooLong": "Use no máximo {tripNameMax} caracteres."
 	},
 	"signIn": {
 		"title": "Bem-vindo de volta",
@@ -73,15 +75,31 @@
 		"invalidLink": "Este link de confirmação é inválido ou expirou. Entre para receber outro.",
 		"signIn": "Entrar"
 	},
-	"session": {
-		"title": "Sua sessão",
-		"subtitle": "Lida no servidor, a partir do cookie da sua sessão.",
-		"name": "Nome",
-		"email": "Email",
-		"language": "Idioma",
-		"emailConfirmed": "Email confirmado",
-		"yes": "Sim",
-		"no": "Não",
+	"trips": {
+		"title": "Suas viagens",
+		"comingUp": "{count, plural, one {# viagem pela frente} other {# viagens pela frente}}",
+		"upcoming": "Próximas",
+		"past": "Passadas",
+		"noStops": "Nenhuma parada ainda",
+		"planTrip": "Planejar uma viagem",
+		"planTripHint": "Dê um nome e depois adicione as paradas",
+		"noPastTrips": "Nenhuma viagem passada ainda",
+		"loading": "Carregando suas viagens…",
+		"loadFailed": "Não conseguimos carregar suas viagens.",
+		"tryAgain": "Tentar de novo",
+		"newTrip": "Nova viagem"
+	},
+	"newTrip": {
+		"title": "Planejar uma viagem",
+		"subtitle": "Paradas e atividades vêm depois.",
+		"name": "Nome da viagem",
+		"owner": "A viagem será sua.",
+		"cancel": "Cancelar",
+		"submit": "Criar viagem",
+		"close": "Fechar",
+		"created": "Viagem criada"
+	},
+	"userMenu": {
 		"signOut": "Sair"
 	},
 	"languages": {

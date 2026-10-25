@@ -26,7 +26,9 @@
 		"tooManyRequests": "Too many attempts. Wait a moment and try again.",
 		"unexpected": "Something went wrong. Try again.",
 		"passwordRequired": "Enter your password.",
-		"wrongCredentials": "Wrong email or password."
+		"wrongCredentials": "Wrong email or password.",
+		"tripNameRequired": "Give the trip a name.",
+		"tripNameTooLong": "Use at most {tripNameMax} characters."
 	},
 	"signIn": {
 		"title": "Welcome back",
@@ -73,15 +75,31 @@
 		"invalidLink": "This confirmation link is invalid or has expired. Sign in to get a new one.",
 		"signIn": "Sign in"
 	},
-	"session": {
-		"title": "Your session",
-		"subtitle": "Read on the server, from your session cookie.",
-		"name": "Name",
-		"email": "Email",
-		"language": "Language",
-		"emailConfirmed": "Email confirmed",
-		"yes": "Yes",
-		"no": "No",
+	"trips": {
+		"title": "Your trips",
+		"comingUp": "{count, plural, other {# coming up}}",
+		"upcoming": "Upcoming",
+		"past": "Past",
+		"noStops": "No stops yet",
+		"planTrip": "Plan a new trip",
+		"planTripHint": "Name it, then add the stops",
+		"noPastTrips": "No past trips yet",
+		"loading": "Loading your trips…",
+		"loadFailed": "We couldn't load your trips.",
+		"tryAgain": "Try again",
+		"newTrip": "New trip"
+	},
+	"newTrip": {
+		"title": "Plan a new trip",
+		"subtitle": "Stops and activities come next.",
+		"name": "Trip name",
+		"owner": "You'll be the owner.",
+		"cancel": "Cancel",
+		"submit": "Create trip",
+		"close": "Close",
+		"created": "Trip created"
+	},
+	"userMenu": {
 		"signOut": "Sign out"
 	},
 	"languages": {
