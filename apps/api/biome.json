@@ -4,5 +4,24 @@
 	"extends": "//",
 	"files": {
 		"includes": ["**", "!src/db/migrations/meta"]
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["src/**/routes.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"zod": "Route input is validated with Elysia's `t` (TypeBox), never Zod (docs/project/development.md §2, API)."
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	]
 }
