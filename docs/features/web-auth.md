@@ -24,6 +24,25 @@ The auth screens redirect to `/session` when there is already a session.
 - **API access** (`src/lib/api.ts`, `auth.ts`, `session.ts`): one axios instance on `/api`. In development, Next's `rewrites` send `/api/*` to `API_URL` (default `http://localhost:3000`), so the browser sees one origin, as with Caddy in production. The server forwards `x-forwarded-for`/`cf-connecting-ip` with the cookie, so the API's rate limit counts the visitor, not the Next server.
 - **CI:** a `web` area and job (lint, typecheck, build, test); Turbo knows the web's inputs and the `.next` output.
 
+## Forms and queries (plan §11, revision 4)
+
+- **`Form`** (`src/components/form/form.tsx`): react-hook-form + a zod schema (`src/lib/schemas/auth.ts`, messages as next-intl keys), wrapped in a fieldset. While pending, `useFormPending()` turns off every field, the show-password and Google buttons, and the `SubmitButton`, which shows shadcn's `Spinner` and `aria-busy="true"`. Forms that navigate on success (sign-in, new password) stay pending until the page changes.
+- **Fields** (`form-fields.tsx`): `FormTextField`, `FormPasswordField` and `FormRootAlert` register in the form around and translate its errors; server errors come in with `setError` (`root` for the whole form).
+- **Requests** (`src/lib/auth/`): `useSignUp`, `useSignIn` (refreshes the session query), `useSignOut` (empties it), `useRequestPasswordReset`, `useResetPassword` and `useSession`.
+- **Session:** `/session` reads the cookie on the server, seeds the query and hydrates it; `useSession()` keeps it: fresh for 30 s, then every 60 s with the tab visible, on focus and on reconnect. When a refresh finds no session (signed out elsewhere, expired, password reset), the page goes to `/sign-in`. Signing out shows a busy button too.
+- **Biome** (`apps/web/biome.json`): only `src/lib/**` may import `axios` or the `api` instance; only `src/components/form/**` and `*-form.tsx` may import `react-hook-form`.
+
+| Behavior | RED |
+|---|---|
+| A form turns its controls off and the button busy while sending | Missing module; then happy-dom showed that a disabled fieldset doesn't disable its children there, so controls read `useFormPending()` |
+| …and turns them back on when the request fails | Characterization |
+| Sign-up, sign-in, forgot and new password turn their fields off while sending | One RED per form, on the old forms; their earlier tests held through the move to react-hook-form |
+| The session screen shows what the server read, without asking again | Missing module |
+| A refresh that finds the session over goes to sign-in | No navigation |
+| Signing out forgets the session at once | The details stayed on screen |
+| The sign-out button is busy while signing out | Characterization |
+| The import rules | A probe component importing `axios`, `api` and `react-hook-form` passed lint; with the rules, 3 errors. In a `*-form.tsx`, only `api` is refused (`errorCode` stays allowed). Both probes deleted |
+
 ## Decisions
 
 | Topic | Where it is recorded |
@@ -32,6 +51,7 @@ The auth screens redirect to `/session` when there is already a session.
 | Design adaptations, the language cookie, the input outline, no `dark:` styles | `architecture.md` D43; plan B9, A14 |
 | axe in component tests; the web's test edges | `development.md` §1 and §2; plan B6, B7 |
 | No Playwright in this item | Plan B8 |
+| Forms and requests by default | Plan §11 (R1–R4); `development.md` §2; `architecture.md` D42 |
 
 ## How it was verified
 
