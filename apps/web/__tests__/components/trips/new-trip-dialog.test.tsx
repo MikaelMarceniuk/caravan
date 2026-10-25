@@ -145,4 +145,29 @@ describe('the new trip dialog', () => {
 			'Balkans Road Trip',
 		)
 	})
+
+	test('closes on Cancel and gives the focus back', async () => {
+		await renderTripsScreen()
+		const user = userEvent.setup()
+		const opener = screen.getByRole('button', { name: 'New trip' })
+
+		await user.click(opener)
+		await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+		await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+		expect(document.activeElement).toBe(opener)
+	})
+
+	test('opens from the new trip card and closes on Escape', async () => {
+		await renderTripsScreen()
+		const user = userEvent.setup()
+		const opener = screen.getByRole('button', { name: 'Plan a new trip' })
+
+		await user.click(opener)
+		expect(document.activeElement).toBe(screen.getByLabelText('Trip name'))
+		await user.keyboard('{Escape}')
+
+		await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+		expect(document.activeElement).toBe(opener)
+	})
 })
