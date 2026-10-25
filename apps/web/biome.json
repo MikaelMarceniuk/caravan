@@ -41,6 +41,54 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": [
+				"src/**",
+				"!src/lib/**",
+				"!src/components/form/**",
+				"!src/components/**/*-form.tsx"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"axios": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web).",
+									"@/lib/api": {
+										"importNames": ["api"],
+										"message": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web)."
+									},
+									"react-hook-form": "Forms are built on src/components/form (Form, SubmitButton, FormTextField...)."
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/components/form/**", "src/components/**/*-form.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"axios": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web).",
+									"@/lib/api": {
+										"importNames": ["api"],
+										"message": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web)."
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	]
 }
