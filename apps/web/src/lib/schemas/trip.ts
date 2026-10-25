@@ -1,8 +1,13 @@
+import { TRIP_NAME_MAX } from '@caravan/core'
 import { z } from 'zod'
 
 // The new trip form's rules. Messages are next-intl keys, translated where they show (src/components/form).
 // The API has the final word: its route checks the same limit (architecture.md D29, development.md §2, API).
 
 export const newTripSchema = z.object({
-	name: z.string().trim().min(1, { error: 'errors.tripNameRequired' }),
+	name: z
+		.string()
+		.trim()
+		.min(1, { error: 'errors.tripNameRequired' })
+		.max(TRIP_NAME_MAX, { error: 'errors.tripNameTooLong' }),
 })

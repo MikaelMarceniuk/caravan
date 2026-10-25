@@ -27,7 +27,8 @@
 		"unexpected": "Something went wrong. Try again.",
 		"passwordRequired": "Enter your password.",
 		"wrongCredentials": "Wrong email or password.",
-		"tripNameRequired": "Give the trip a name."
+		"tripNameRequired": "Give the trip a name.",
+		"tripNameTooLong": "Use at most {tripNameMax} characters."
 	},
 	"signIn": {
 		"title": "Welcome back",

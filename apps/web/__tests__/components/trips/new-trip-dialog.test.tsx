@@ -33,7 +33,10 @@ async function renderTripsScreen() {
 async function createTrip(name: string) {
 	const user = userEvent.setup()
 	await user.click(screen.getByRole('button', { name: 'New trip' }))
-	if (name) await user.type(screen.getByLabelText('Trip name'), name)
+	if (name) {
+		await user.click(screen.getByLabelText('Trip name'))
+		await user.paste(name)
+	}
 	await user.click(screen.getByRole('button', { name: 'Create trip' }))
 }
 
@@ -63,6 +66,17 @@ describe('the new trip dialog', () => {
 
 		expect(descriptionOf(screen.getByLabelText('Trip name'))).toBe(
 			'Give the trip a name.',
+		)
+		expect(sentBesidesTheList(api)).toEqual([])
+	})
+
+	test('refuses a name longer than 120 characters', async () => {
+		const api = await renderTripsScreen()
+
+		await createTrip('a'.repeat(121))
+
+		expect(descriptionOf(screen.getByLabelText('Trip name'))).toBe(
+			'Use at most 120 characters.',
 		)
 		expect(sentBesidesTheList(api)).toEqual([])
 	})

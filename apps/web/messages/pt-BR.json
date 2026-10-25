@@ -27,7 +27,8 @@
 		"unexpected": "Algo deu errado. Tente de novo.",
 		"passwordRequired": "Informe a sua senha.",
 		"wrongCredentials": "Email ou senha incorretos.",
-		"tripNameRequired": "Dê um nome à viagem."
+		"tripNameRequired": "Dê um nome à viagem.",
+		"tripNameTooLong": "Use no máximo {tripNameMax} caracteres."
 	},
 	"signIn": {
 		"title": "Bem-vindo de volta",
