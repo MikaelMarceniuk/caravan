@@ -1,0 +1,33 @@
+{
+	"$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+	"root": false,
+	"extends": "//",
+	"overrides": [
+		{
+			"includes": ["src/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noNodejsModules": "error"
+					},
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"bun": "tokens are read by the web and, later, React Native: no Bun APIs (AGENTS.md, Dependencies)."
+								},
+								"patterns": [
+									{
+										"group": ["bun:*"],
+										"message": "tokens use no runtime APIs (AGENTS.md, Dependencies)."
+									}
+								]
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}

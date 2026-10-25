@@ -1,0 +1,15 @@
+{
+	"name": "@caravan/tokens",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./theme.css": "./theme.css"
+	},
+	"scripts": {
+		"lint": "biome ci .",
+		"typecheck": "tsc -p tsconfig.json && tsc -p __tests__/tsconfig.json",
+		"test": "bun test",
+		"generate": "bun scripts/generate-css.ts"
+	}
+}

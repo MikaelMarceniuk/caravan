@@ -24,6 +24,7 @@ jobs:
     outputs:
       packages: ${{ steps.areas.outputs.packages }}
       api: ${{ steps.areas.outputs.api }}
+      web: ${{ steps.areas.outputs.web }}
       infra: ${{ steps.areas.outputs.infra }}
     steps:
       - uses: actions/checkout@v7
@@ -76,6 +77,19 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  web:
+    name: Web
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: bun install --frozen-lockfile
+      - name: Lint, typecheck, build and test
+        run: bunx turbo run lint typecheck build test --filter=@caravan/web
+
   infra:
     name: Infra
     needs: changes
@@ -103,7 +117,7 @@ jobs:
   ci:
     name: CI
     if: always()
-    needs: [changes, packages, api, infra]
+    needs: [changes, packages, api, web, infra]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 5
     steps:

@@ -5,8 +5,8 @@
 set -euo pipefail
 
 # Area name → path of its workspaces (a workspace path is that path or below it).
-# `web` and `mobile` join when their apps exist.
-declare -A areas=([packages]=packages [api]=apps/api)
+# `mobile` joins when its app exists.
+declare -A areas=([packages]=packages [api]=apps/api [web]=apps/web)
 # Workspace area → path regex of files outside the workspace that its tests also depend on.
 # The API tests run against the compose Postgres (docs/planners/m1-foundation/3.api-and-database.md, Q11).
 declare -A area_extra_paths=([api]='^infra/')

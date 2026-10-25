@@ -1,0 +1,94 @@
+{
+	"$schema": "../../node_modules/@biomejs/biome/configuration_schema.json",
+	"root": false,
+	"extends": "//",
+	"files": {
+		"includes": ["**", "!.next", "!next-env.d.ts"]
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"linter": {
+		"domains": {
+			"next": "recommended",
+			"react": "recommended"
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["src/components/ui/**"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useSemanticElements": "off",
+						"useKeyWithClickEvents": "off"
+					},
+					"suspicious": {
+						"noDoubleEquals": "off",
+						"noArrayIndexKey": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/app/globals.css"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noImportantStyles": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/**",
+				"!src/lib/**",
+				"!src/components/form/**",
+				"!src/components/**/*-form.tsx"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"axios": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web).",
+									"@/lib/api": {
+										"importNames": ["api"],
+										"message": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web)."
+									},
+									"react-hook-form": "Forms are built on src/components/form (Form, SubmitButton, FormTextField...)."
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/components/form/**", "src/components/**/*-form.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"axios": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web).",
+									"@/lib/api": {
+										"importNames": ["api"],
+										"message": "Requests go through a TanStack Query hook in src/lib (development.md \u00a72, Web)."
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	]
+}

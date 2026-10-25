@@ -20,7 +20,7 @@ const authUrl = requiredEnv('BETTER_AUTH_URL')
 const resendApiKey = requiredEnv('RESEND_API_KEY')
 const emailFrom = requiredEnv('EMAIL_FROM')
 
-const port = Number(process.env.PORT ?? 3000)
+const port = Number(process.env.PORT ?? 3333)
 const db = createDb(databaseUrl)
 const mailer = createResendMailer({ apiKey: resendApiKey, from: emailFrom })
 const auth = createAuth({ db, secret: authSecret, baseURL: authUrl, mailer })

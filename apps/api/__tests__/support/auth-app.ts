@@ -5,7 +5,7 @@ import type { Mailer } from '../../src/email/mailer'
 import { createFakeMailer, type FakeMailer, linkIn } from './fake-mailer'
 
 // The web's origin: Better Auth only trusts requests from its base URL.
-export const BASE_URL = 'http://localhost:3001'
+export const BASE_URL = 'http://localhost:3000'
 const SECRET = 'test-secret-that-is-at-least-32-characters-long'
 
 /**

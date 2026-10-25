@@ -5,7 +5,7 @@ import {
 } from '../../src/email/templates'
 
 const URL =
-	'http://localhost:3001/api/auth/verify-email?token=abc&callbackURL=%2Fverify-email'
+	'http://localhost:3000/api/auth/verify-email?token=abc&callbackURL=%2Fverify-email'
 
 describe('the verification email', () => {
 	test('is written in Portuguese for a Portuguese-speaking traveler', () => {
@@ -24,7 +24,7 @@ describe('the verification email', () => {
 		const email = verificationEmail({ locale: 'en-US', name: 'Ana', url: URL })
 
 		expect(email.html).toContain(
-			'href="http://localhost:3001/api/auth/verify-email?token=abc&amp;callbackURL=%2Fverify-email"',
+			'href="http://localhost:3000/api/auth/verify-email?token=abc&amp;callbackURL=%2Fverify-email"',
 		)
 		expect(email.text).toContain(URL)
 	})
@@ -43,7 +43,7 @@ describe('the verification email', () => {
 
 describe('the password reset email', () => {
 	const RESET_URL =
-		'http://localhost:3001/api/auth/reset-password/abc?callbackURL=%2Freset-password'
+		'http://localhost:3000/api/auth/reset-password/abc?callbackURL=%2Freset-password'
 
 	test('is written in the traveler language, with the link', () => {
 		const portuguese = resetPasswordEmail({

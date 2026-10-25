@@ -1,0 +1,23 @@
+/* Generated from packages/tokens by `bun run generate`: do not edit. */
+:root {
+	--background: #13131a;
+	--canvas: #0f0f15;
+	--surface: #1b1b24;
+	--border: #30303d;
+	--input: #6b6980;
+	--foreground: #f4f1ea;
+	--label: #c9c5d3;
+	--muted: #a7a3b3;
+	--subtle: #8c889a;
+	--accent: #ffd23f;
+	--brand: #ff8a3d;
+	--success: #3ddc84;
+	--danger: #ff7b7b;
+	--primary: #f4f1ea;
+	--primary-foreground: #13131a;
+	--pink: #ff6b8b;
+	--orange: #ff8a3d;
+	--teal: #2ec4b6;
+	--blue: #4d8dff;
+	--magenta: #e837b9;
+}
