@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import type { TripSummary } from '@caravan/core'
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
 import { fakeApi, pendingReply } from '../../support/fake-api'
+import { navigation } from '../../support/navigation'
 import { renderUi, testQueryClient } from '../../support/render'
 
 const ana: Traveler = {
@@ -131,5 +132,22 @@ describe('the trips screen', () => {
 			.click(screen.getByRole('button', { name: 'Try again' }))
 
 		expect(await tripNames()).toEqual(['Balkans Road Trip'])
+	})
+
+	test('signs out from the user menu', async () => {
+		const api = fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [] } }),
+			'POST /auth/sign-out': () => ({ status: 200, data: { success: true } }),
+		})
+		renderTripsScreen()
+		const user = userEvent.setup()
+
+		await user.click(screen.getByRole('button', { name: 'Ana Souza' }))
+		await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
+
+		await waitFor(() => expect(navigation.visited()).toEqual(['/sign-in']))
+		expect(api.requests.map(({ route }) => route)).toContain(
+			'POST /auth/sign-out',
+		)
 	})
 })

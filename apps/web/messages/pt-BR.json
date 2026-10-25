@@ -110,6 +110,9 @@
 		"close": "Fechar",
 		"created": "Viagem criada"
 	},
+	"userMenu": {
+		"signOut": "Sair"
+	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
 		"en-US": "English (US)"

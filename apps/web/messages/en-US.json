@@ -110,6 +110,9 @@
 		"close": "Close",
 		"created": "Trip created"
 	},
+	"userMenu": {
+		"signOut": "Sign out"
+	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
 		"en-US": "English (US)"

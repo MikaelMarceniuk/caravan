@@ -4,6 +4,7 @@ import type { TripSummary } from '@caravan/core'
 import { PlusIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
+import { AppHeader } from '@/components/app/app-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
@@ -20,39 +21,42 @@ export function TripsScreen() {
 	const t = useTranslations('trips')
 	const trips = useTrips()
 	return (
-		<main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-8">
-			{trips.isSuccess ? (
-				<TripTabs trips={trips.data} />
-			) : (
-				<>
-					<Title />
-					{trips.isError ? (
-						<div className="flex flex-col items-start gap-4">
-							<Alert variant="destructive">
-								<AlertDescription>{t('loadFailed')}</AlertDescription>
-							</Alert>
-							<Button
-								variant="outline"
-								size="lg"
-								disabled={trips.isFetching}
-								aria-busy={trips.isFetching || undefined}
-								onClick={() => trips.refetch()}
+		<>
+			<AppHeader />
+			<main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-8">
+				{trips.isSuccess ? (
+					<TripTabs trips={trips.data} />
+				) : (
+					<>
+						<Title />
+						{trips.isError ? (
+							<div className="flex flex-col items-start gap-4">
+								<Alert variant="destructive">
+									<AlertDescription>{t('loadFailed')}</AlertDescription>
+								</Alert>
+								<Button
+									variant="outline"
+									size="lg"
+									disabled={trips.isFetching}
+									aria-busy={trips.isFetching || undefined}
+									onClick={() => trips.refetch()}
+								>
+									{t('tryAgain')}
+								</Button>
+							</div>
+						) : (
+							<p
+								role="status"
+								className="flex items-center gap-2 text-muted-foreground"
 							>
-								{t('tryAgain')}
-							</Button>
-						</div>
-					) : (
-						<p
-							role="status"
-							className="flex items-center gap-2 text-muted-foreground"
-						>
-							<Spinner aria-hidden="true" role="presentation" />
-							{t('loading')}
-						</p>
-					)}
-				</>
-			)}
-		</main>
+								<Spinner aria-hidden="true" role="presentation" />
+								{t('loading')}
+							</p>
+						)}
+					</>
+				)}
+			</main>
+		</>
 	)
 }
 
