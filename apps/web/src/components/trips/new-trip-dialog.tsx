@@ -1,7 +1,8 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
+import { toast } from 'sonner'
 import {
 	Dialog,
 	DialogContent,
@@ -18,8 +19,15 @@ import { NewTripForm } from './new-trip-form'
  */
 export function NewTripDialog({ children }: { children: ReactNode }) {
 	const t = useTranslations('newTrip')
+	const [open, setOpen] = useState(false)
+
+	function created() {
+		setOpen(false)
+		toast.success(t('created'))
+	}
+
 	return (
-		<Dialog>
+		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>{children}</DialogTrigger>
 			<DialogContent
 				closeLabel={t('close')}
@@ -31,7 +39,7 @@ export function NewTripDialog({ children }: { children: ReactNode }) {
 					</DialogTitle>
 					<DialogDescription>{t('subtitle')}</DialogDescription>
 				</DialogHeader>
-				<NewTripForm />
+				<NewTripForm onCreated={created} />
 			</DialogContent>
 		</Dialog>
 	)

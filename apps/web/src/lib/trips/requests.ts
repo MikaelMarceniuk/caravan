@@ -8,3 +8,9 @@ export async function fetchTrips() {
 	const { data } = await api.get<{ trips: TripSummary[] }>('/trips')
 	return data.trips
 }
+
+/** Creates a trip with the traveler as its owner. */
+export async function createTrip(input: { name: string }) {
+	const { data } = await api.post<{ trip: TripSummary }>('/trips', input)
+	return data.trip
+}

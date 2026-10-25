@@ -107,7 +107,8 @@
 		"owner": "A viagem será sua.",
 		"cancel": "Cancelar",
 		"submit": "Criar viagem",
-		"close": "Fechar"
+		"close": "Fechar",
+		"created": "Viagem criada"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

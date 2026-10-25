@@ -107,7 +107,8 @@
 		"owner": "You'll be the owner.",
 		"cancel": "Cancel",
 		"submit": "Create trip",
-		"close": "Close"
+		"close": "Close",
+		"created": "Trip created"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

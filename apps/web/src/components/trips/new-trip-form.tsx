@@ -10,18 +10,25 @@ import { Button } from '@/components/ui/button'
 import { DialogClose } from '@/components/ui/dialog'
 import { FieldGroup } from '@/components/ui/field'
 import { newTripSchema } from '@/lib/schemas/trip'
+import { useCreateTrip } from '@/lib/trips'
 
 type Values = z.infer<typeof newTripSchema>
 
 /** The new trip dialog's form: only the name in M1 (dates come from the stops, D44; invites in M4). */
-export function NewTripForm() {
+export function NewTripForm({ onCreated }: { onCreated: () => void }) {
 	const t = useTranslations('newTrip')
+	const createTrip = useCreateTrip()
 	const form = useForm<Values>({
 		resolver: zodResolver(newTripSchema),
 		defaultValues: { name: '' },
 	})
+
+	function submit(values: Values) {
+		createTrip.mutate(values, { onSuccess: onCreated })
+	}
+
 	return (
-		<Form form={form} onSubmit={() => {}} pending={false}>
+		<Form form={form} onSubmit={submit} pending={createTrip.isPending}>
 			<FieldGroup>
 				<FormTextField name="name" label={t('name')} autoComplete="off" />
 				<div className="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center">
