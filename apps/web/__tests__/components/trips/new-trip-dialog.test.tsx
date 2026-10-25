@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
+import { descriptionOf } from '../../support/a11y'
 import { fakeApi } from '../../support/fake-api'
 import { renderUi, testQueryClient } from '../../support/render'
 
@@ -16,13 +17,31 @@ const ana: Traveler = {
 
 const LIST_TRIPS = 'GET /trips'
 
-/** The trips screen of a signed-in traveler with no trips yet, loaded. */
+/** The trips screen of a signed-in traveler with no trips yet, loaded. Returns the requests the API got. */
 async function renderTripsScreen() {
-	fakeApi({ [LIST_TRIPS]: () => ({ status: 200, data: { trips: [] } }) })
+	const api = fakeApi({
+		[LIST_TRIPS]: () => ({ status: 200, data: { trips: [] } }),
+	})
 	const queryClient = testQueryClient()
 	queryClient.setQueryData(SESSION_KEY, ana)
 	renderUi(<TripsScreen />, { queryClient })
 	await screen.findByRole('tab', { name: 'Upcoming 0' })
+	return api
+}
+
+/** Opens the dialog, types the name (if any) and sends it. */
+async function createTrip(name: string) {
+	const user = userEvent.setup()
+	await user.click(screen.getByRole('button', { name: 'New trip' }))
+	if (name) await user.type(screen.getByLabelText('Trip name'), name)
+	await user.click(screen.getByRole('button', { name: 'Create trip' }))
+}
+
+/** The routes the API was asked for, besides the trip list the screen loads. */
+function sentBesidesTheList(
+	api: Awaited<ReturnType<typeof renderTripsScreen>>,
+) {
+	return api.requests.filter(({ route }) => route !== LIST_TRIPS)
 }
 
 describe('the new trip dialog', () => {
@@ -35,5 +54,16 @@ describe('the new trip dialog', () => {
 
 		expect(screen.getByRole('dialog', { name: 'Plan a new trip' })).toBeTruthy()
 		expect(document.activeElement).toBe(screen.getByLabelText('Trip name'))
+	})
+
+	test('asks for a name, and sends nothing', async () => {
+		const api = await renderTripsScreen()
+
+		await createTrip('   ')
+
+		expect(descriptionOf(screen.getByLabelText('Trip name'))).toBe(
+			'Give the trip a name.',
+		)
+		expect(sentBesidesTheList(api)).toEqual([])
 	})
 })

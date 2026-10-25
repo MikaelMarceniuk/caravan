@@ -26,7 +26,8 @@
 		"tooManyRequests": "Too many attempts. Wait a moment and try again.",
 		"unexpected": "Something went wrong. Try again.",
 		"passwordRequired": "Enter your password.",
-		"wrongCredentials": "Wrong email or password."
+		"wrongCredentials": "Wrong email or password.",
+		"tripNameRequired": "Give the trip a name."
 	},
 	"signIn": {
 		"title": "Welcome back",

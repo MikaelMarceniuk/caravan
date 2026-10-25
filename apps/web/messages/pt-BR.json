@@ -26,7 +26,8 @@
 		"tooManyRequests": "Muitas tentativas. Espere um pouco e tente de novo.",
 		"unexpected": "Algo deu errado. Tente de novo.",
 		"passwordRequired": "Informe a sua senha.",
-		"wrongCredentials": "Email ou senha incorretos."
+		"wrongCredentials": "Email ou senha incorretos.",
+		"tripNameRequired": "Dê um nome à viagem."
 	},
 	"signIn": {
 		"title": "Bem-vindo de volta",
