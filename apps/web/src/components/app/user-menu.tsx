@@ -31,13 +31,9 @@ export function UserMenu({ traveler }: { traveler: Traveler }) {
 	const signOut = useSignOut()
 
 	function leave() {
-		signOut.mutate(undefined, {
-			onSuccess() {
-				router.replace('/sign-in')
-				// The server components read the session again, now without one.
-				router.refresh()
-			},
-		})
+		// useSignOut forgets the session, and the screen goes to sign-in on its own;
+		// the server components read the session again, now without one.
+		signOut.mutate(undefined, { onSuccess: () => router.refresh() })
 	}
 
 	return (

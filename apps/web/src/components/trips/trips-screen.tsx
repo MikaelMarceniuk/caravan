@@ -2,13 +2,15 @@
 
 import type { TripSummary } from '@caravan/core'
 import { PlusIcon } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import { AppHeader } from '@/components/app/app-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSession } from '@/lib/auth'
 import { useTrips } from '@/lib/trips'
 import { NewTripDialog } from './new-trip-dialog'
 import { PlanTripCard } from './plan-trip-card'
@@ -19,7 +21,15 @@ const NO_TRIPS: TripSummary[] = []
 /** The trips page's client side: the traveler's trips, asked to the API. */
 export function TripsScreen() {
 	const t = useTranslations('trips')
+	const router = useRouter()
+	const { data: traveler } = useSession()
 	const trips = useTrips()
+
+	// Signed out elsewhere, expired, or every session ended by a password reset.
+	useEffect(() => {
+		if (traveler === null) router.replace('/sign-in')
+	}, [traveler, router])
+
 	return (
 		<>
 			<AppHeader />

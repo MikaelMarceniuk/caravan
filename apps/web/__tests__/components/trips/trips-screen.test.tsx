@@ -150,4 +150,14 @@ describe('the trips screen', () => {
 			'POST /auth/sign-out',
 		)
 	})
+
+	test('goes to sign-in when the API says the session is over', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 401, data: { code: 'UNAUTHORIZED' } }),
+		})
+
+		renderTripsScreen()
+
+		await waitFor(() => expect(navigation.visited()).toEqual(['/sign-in']))
+	})
 })
