@@ -104,4 +104,28 @@ describe('the trips', () => {
 			trip: { name: 'Balkans Road Trip' },
 		})
 	})
+
+	test('refuses a name that is not text', async () => {
+		const { app, cookie } = await signedIn()
+
+		const response = await requestApi(app, 'POST', '/trips', {
+			cookie,
+			body: { name: 42 },
+		})
+
+		expect(response.status).toBe(422)
+		expect(await response.json()).toEqual({ code: 'INVALID_INPUT' })
+	})
+
+	test('refuses a body that is not valid JSON', async () => {
+		const { app, cookie } = await signedIn()
+
+		const response = await requestApi(app, 'POST', '/trips', {
+			cookie,
+			body: '{"name": ',
+		})
+
+		expect(response.status).toBe(400)
+		expect(await response.json()).toEqual({ code: 'INVALID_INPUT' })
+	})
 })

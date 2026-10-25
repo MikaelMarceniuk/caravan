@@ -8,9 +8,10 @@ export function tripRoutes({ db, auth }: AppDependencies) {
 	return (
 		new Elysia({ prefix: '/api/trips' })
 			.use(sessionPlugin(auth))
-			// A code, never the validator's message (D34).
+			// A code, never the validator's or the parser's text (D34).
 			.onError(({ code, status }) => {
 				if (code === 'VALIDATION') return status(422, { code: 'INVALID_INPUT' })
+				if (code === 'PARSE') return status(400, { code: 'INVALID_INPUT' })
 			})
 			.get(
 				'/',
