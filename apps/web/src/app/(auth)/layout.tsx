@@ -8,6 +8,6 @@ export default async function AuthScreensLayout({
 }: {
 	children: ReactNode
 }) {
-	if (await getSession()) redirect('/session')
+	if (await getSession()) redirect('/trips')
 	return children
 }

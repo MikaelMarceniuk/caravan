@@ -75,17 +75,6 @@
 		"invalidLink": "Este link de confirmação é inválido ou expirou. Entre para receber outro.",
 		"signIn": "Entrar"
 	},
-	"session": {
-		"title": "Sua sessão",
-		"subtitle": "Lida no servidor, a partir do cookie da sua sessão.",
-		"name": "Nome",
-		"email": "Email",
-		"language": "Idioma",
-		"emailConfirmed": "Email confirmado",
-		"yes": "Sim",
-		"no": "Não",
-		"signOut": "Sair"
-	},
 	"trips": {
 		"title": "Suas viagens",
 		"comingUp": "{count, plural, one {# viagem pela frente} other {# viagens pela frente}}",

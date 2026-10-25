@@ -34,13 +34,13 @@ async function signIn({
 }
 
 describe('the sign-in form', () => {
-	test('signs the traveler in and opens the session page', async () => {
+	test('signs the traveler in and opens their trips', async () => {
 		const api = fakeApi({ [SIGN_IN]: () => traveler() })
 		renderUi(<SignInForm />)
 
 		await signIn()
 
-		await waitFor(() => expect(navigation.visited()).toEqual(['/session']))
+		await waitFor(() => expect(navigation.visited()).toEqual(['/trips']))
 		expect(api.requests).toEqual([
 			{
 				route: SIGN_IN,

@@ -27,10 +27,13 @@ const japan: TripSummary = {
 
 const LIST_TRIPS = 'GET /trips'
 
-/** The trips screen of a signed-in traveler, as the server hands it over. */
-function renderTripsScreen() {
+/**
+ * The trips screen of a signed-in traveler, as the server hands it over.
+ * `sessionReadAt` 0 stands for a session read long ago, past its 30 s of freshness.
+ */
+function renderTripsScreen({ sessionReadAt }: { sessionReadAt?: number } = {}) {
 	const queryClient = testQueryClient()
-	queryClient.setQueryData(SESSION_KEY, ana)
+	queryClient.setQueryData(SESSION_KEY, ana, { updatedAt: sessionReadAt })
 	return renderUi(<TripsScreen />, { queryClient })
 }
 
@@ -157,6 +160,29 @@ describe('the trips screen', () => {
 		})
 
 		renderTripsScreen()
+
+		await waitFor(() => expect(navigation.visited()).toEqual(['/sign-in']))
+	})
+
+	test('shows who is signed in without asking the API again', async () => {
+		const api = fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [] } }),
+		})
+
+		renderTripsScreen()
+
+		expect(screen.getByRole('button', { name: 'Ana Souza' })).toBeTruthy()
+		await screen.findByRole('tab', { name: 'Upcoming 0' })
+		expect(api.requests.map(({ route }) => route)).toEqual([LIST_TRIPS])
+	})
+
+	test('goes to sign-in when a refresh finds the session over', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [] } }),
+			'GET /auth/get-session': () => ({ status: 200, data: null }),
+		})
+
+		renderTripsScreen({ sessionReadAt: 0 })
 
 		await waitFor(() => expect(navigation.visited()).toEqual(['/sign-in']))
 	})

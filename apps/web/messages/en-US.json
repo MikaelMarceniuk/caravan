@@ -75,17 +75,6 @@
 		"invalidLink": "This confirmation link is invalid or has expired. Sign in to get a new one.",
 		"signIn": "Sign in"
 	},
-	"session": {
-		"title": "Your session",
-		"subtitle": "Read on the server, from your session cookie.",
-		"name": "Name",
-		"email": "Email",
-		"language": "Language",
-		"emailConfirmed": "Email confirmed",
-		"yes": "Yes",
-		"no": "No",
-		"signOut": "Sign out"
-	},
 	"trips": {
 		"title": "Your trips",
 		"comingUp": "{count, plural, other {# coming up}}",
