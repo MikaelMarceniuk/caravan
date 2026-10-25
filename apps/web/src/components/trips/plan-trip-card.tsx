@@ -1,9 +1,9 @@
 import { PlusIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useId } from 'react'
+import { type ComponentProps, useId } from 'react'
 
 /** The dashed card at the end of the upcoming trips that starts a new one. */
-export function PlanTripCard() {
+export function PlanTripCard(props: ComponentProps<'button'>) {
 	const t = useTranslations('trips')
 	const titleId = useId()
 	const hintId = useId()
@@ -12,6 +12,7 @@ export function PlanTripCard() {
 			type="button"
 			aria-labelledby={titleId}
 			aria-describedby={hintId}
+			{...props}
 			className="flex min-h-44 w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-6 text-center transition-colors hover:bg-card focus-visible:outline-2 focus-visible:outline-ring"
 		>
 			<span className="flex size-12 items-center justify-center rounded-lg border bg-card">

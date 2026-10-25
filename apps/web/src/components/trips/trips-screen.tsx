@@ -1,6 +1,7 @@
 'use client'
 
 import type { TripSummary } from '@caravan/core'
+import { PlusIcon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { ReactNode } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTrips } from '@/lib/trips'
+import { NewTripDialog } from './new-trip-dialog'
 import { PlanTripCard } from './plan-trip-card'
 import { TripCard } from './trip-card'
 
@@ -79,18 +81,28 @@ function TripTabs({ trips }: { trips: TripSummary[] }) {
 						{t('comingUp', { count: upcoming.length })}
 					</p>
 				</Title>
-				<TabsList>
-					<TabsTrigger value="upcoming">
-						{t('upcoming')} <TabCount count={upcoming.length} />
-					</TabsTrigger>
-					<TabsTrigger value="past">
-						{t('past')} <TabCount count={past.length} />
-					</TabsTrigger>
-				</TabsList>
+				<div className="flex flex-wrap items-center gap-3">
+					<TabsList>
+						<TabsTrigger value="upcoming">
+							{t('upcoming')} <TabCount count={upcoming.length} />
+						</TabsTrigger>
+						<TabsTrigger value="past">
+							{t('past')} <TabCount count={past.length} />
+						</TabsTrigger>
+					</TabsList>
+					<NewTripDialog>
+						<Button size="lg">
+							<PlusIcon data-icon="inline-start" aria-hidden="true" />
+							{t('newTrip')}
+						</Button>
+					</NewTripDialog>
+				</div>
 			</div>
 			<TabsContent value="upcoming">
 				<TripGrid trips={upcoming}>
-					<PlanTripCard />
+					<NewTripDialog>
+						<PlanTripCard />
+					</NewTripDialog>
 				</TripGrid>
 			</TabsContent>
 			<TabsContent value="past">

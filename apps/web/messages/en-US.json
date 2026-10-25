@@ -95,7 +95,17 @@
 		"noPastTrips": "No past trips yet",
 		"loading": "Loading your trips…",
 		"loadFailed": "We couldn't load your trips.",
-		"tryAgain": "Try again"
+		"tryAgain": "Try again",
+		"newTrip": "New trip"
+	},
+	"newTrip": {
+		"title": "Plan a new trip",
+		"subtitle": "Stops and activities come next.",
+		"name": "Trip name",
+		"owner": "You'll be the owner.",
+		"cancel": "Cancel",
+		"submit": "Create trip",
+		"close": "Close"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

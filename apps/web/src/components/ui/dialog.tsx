@@ -50,9 +50,12 @@ function DialogContent({
 	className,
 	children,
 	showCloseButton = true,
+	closeLabel = 'Close',
 	...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
 	showCloseButton?: boolean
+	/** The close button's name, in the interface's language. */
+	closeLabel?: string
 }) {
 	return (
 		<DialogPortal>
@@ -74,7 +77,7 @@ function DialogContent({
 							size="icon-sm"
 						>
 							<XIcon />
-							<span className="sr-only">Close</span>
+							<span className="sr-only">{closeLabel}</span>
 						</Button>
 					</DialogPrimitive.Close>
 				)}

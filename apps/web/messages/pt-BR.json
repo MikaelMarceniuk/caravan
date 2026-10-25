@@ -95,7 +95,17 @@
 		"noPastTrips": "Nenhuma viagem passada ainda",
 		"loading": "Carregando suas viagens…",
 		"loadFailed": "Não conseguimos carregar suas viagens.",
-		"tryAgain": "Tentar de novo"
+		"tryAgain": "Tentar de novo",
+		"newTrip": "Nova viagem"
+	},
+	"newTrip": {
+		"title": "Planejar uma viagem",
+		"subtitle": "Paradas e atividades vêm depois.",
+		"name": "Nome da viagem",
+		"owner": "A viagem será sua.",
+		"cancel": "Cancelar",
+		"submit": "Criar viagem",
+		"close": "Fechar"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
