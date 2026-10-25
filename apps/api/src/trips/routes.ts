@@ -1,3 +1,4 @@
+import { TRIP_NAME_MAX } from '@caravan/core'
 import { Elysia, t } from 'elysia'
 import type { AppDependencies } from '../app'
 import { sessionPlugin } from '../auth/session'
@@ -28,7 +29,9 @@ export function tripRoutes({ db, auth }: AppDependencies) {
 					transform({ body }) {
 						if (typeof body?.name === 'string') body.name = body.name.trim()
 					},
-					body: t.Object({ name: t.String({ minLength: 1 }) }),
+					body: t.Object({
+						name: t.String({ minLength: 1, maxLength: TRIP_NAME_MAX }),
+					}),
 				},
 			)
 	)
