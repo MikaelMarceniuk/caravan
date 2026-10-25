@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SignInForm } from '@/components/auth/sign-in-form'
-import { descriptionOf } from '../../support/a11y'
+import { descriptionOf, isDisabled } from '../../support/a11y'
 import { axeViolations } from '../../support/axe'
-import { fakeApi } from '../../support/fake-api'
+import { fakeApi, pendingReply } from '../../support/fake-api'
 import { navigation } from '../../support/navigation'
 import { renderUi } from '../../support/render'
 
@@ -152,5 +152,25 @@ describe('the sign-in form', () => {
 			.click(screen.getByRole('button', { name: 'Sign in' }))
 
 		expect([...before, ...(await axeViolations(container))]).toEqual([])
+	})
+
+	test('turns the fields off while signing in', async () => {
+		const reply = pendingReply()
+		fakeApi({ [SIGN_IN]: reply.route })
+		renderUi(<SignInForm />)
+
+		await signIn()
+
+		await waitFor(() =>
+			expect(
+				['Email', 'Password'].map((label) =>
+					isDisabled(screen.getByLabelText(label)),
+				),
+			).toEqual([true, true]),
+		)
+		expect(
+			screen.getByRole('button', { name: 'Sign in' }).getAttribute('aria-busy'),
+		).toBe('true')
+		reply.send(traveler())
 	})
 })

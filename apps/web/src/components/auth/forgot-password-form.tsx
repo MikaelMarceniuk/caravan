@@ -1,43 +1,43 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { type FormEvent, useState } from 'react'
-import { FormAlert } from '@/components/form/form-alert'
-import { TextField } from '@/components/form/text-field'
-import { Button } from '@/components/ui/button'
+import { useForm } from 'react-hook-form'
+import type { z } from 'zod'
+import { Form, SubmitButton } from '@/components/form/form'
+import { FormRootAlert, FormTextField } from '@/components/form/form-fields'
 import { FieldGroup } from '@/components/ui/field'
-import { requestPasswordReset } from '@/lib/auth'
-import { requestErrorMessage } from '@/lib/request-error'
-import { isEmail } from '@/lib/validation'
+import { useRequestPasswordReset } from '@/lib/auth'
+import { requestErrorKey } from '@/lib/request-error'
+import { forgotPasswordSchema } from '@/lib/schemas/auth'
+
+type Values = z.infer<typeof forgotPasswordSchema>
 
 export function ForgotPasswordForm() {
 	const t = useTranslations()
-	const [error, setError] = useState<string>()
-	const [formError, setFormError] = useState<string>()
-	const mutation = useMutation({
-		mutationFn: requestPasswordReset,
-		onError: (failure) => setFormError(requestErrorMessage(failure, t)),
+	const request = useRequestPasswordReset()
+	const form = useForm<Values>({
+		resolver: zodResolver(forgotPasswordSchema),
+		defaultValues: { email: '' },
 	})
 
-	function submit(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault()
-		const email = String(new FormData(event.currentTarget).get('email'))
-		const invalid = isEmail(email) ? undefined : t('errors.emailInvalid')
-		setError(invalid)
-		setFormError(undefined)
-		if (!invalid) mutation.mutate(email)
+	function submit({ email }: Values) {
+		request.mutate(email, {
+			onError: (error) =>
+				form.setError('root', { message: requestErrorKey(error) }),
+		})
 	}
 
-	if (mutation.isSuccess)
+	// The same answer whether or not the email has an account (the API's doesn't tell either).
+	if (request.isSuccess)
 		return (
 			<div className="flex flex-col gap-4">
 				<h1 className="font-heading text-4xl font-bold tracking-tight">
 					{t('forgotPassword.sentTitle')}
 				</h1>
 				<p className="text-muted-foreground">
-					{t('forgotPassword.sent', { email: mutation.variables })}
+					{t('forgotPassword.sent', { email: request.variables })}
 				</p>
 				<Link
 					href="/sign-in"
@@ -56,21 +56,18 @@ export function ForgotPasswordForm() {
 				</h1>
 				<p className="text-muted-foreground">{t('forgotPassword.subtitle')}</p>
 			</header>
-			<form onSubmit={submit} noValidate>
+			<Form form={form} onSubmit={submit} pending={request.isPending}>
 				<FieldGroup>
-					<FormAlert message={formError} />
-					<TextField
-						id="email"
+					<FormRootAlert />
+					<FormTextField
+						name="email"
 						label={t('fields.email')}
 						type="email"
 						autoComplete="email"
-						error={error}
 					/>
-					<Button type="submit" size="lg" disabled={mutation.isPending}>
-						{t('forgotPassword.submit')}
-					</Button>
+					<SubmitButton>{t('forgotPassword.submit')}</SubmitButton>
 				</FieldGroup>
-			</form>
+			</Form>
 			<Link
 				href="/sign-in"
 				className="self-start rounded-sm text-sm text-link underline-offset-4 hover:underline"

@@ -1,20 +1,23 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { type FormEvent, useState } from 'react'
-import { FormAlert } from '@/components/form/form-alert'
-import { PasswordField } from '@/components/form/password-field'
+import { useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
+import type { z } from 'zod'
+import { Form, SubmitButton } from '@/components/form/form'
+import { FormPasswordField, FormRootAlert } from '@/components/form/form-fields'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
 import { FieldGroup } from '@/components/ui/field'
 import { errorCode } from '@/lib/api'
-import { PASSWORD_MIN, resetPassword } from '@/lib/auth'
-import { requestErrorMessage } from '@/lib/request-error'
-import { passwordLengthError } from '@/lib/validation'
+import { PASSWORD_MIN, useResetPassword } from '@/lib/auth'
+import { requestErrorKey } from '@/lib/request-error'
+import { resetPasswordSchema } from '@/lib/schemas/auth'
 import { PasswordLength } from './password-length'
+
+type Values = z.infer<typeof resetPasswordSchema>
 
 /**
  * `token` comes from the emailed link (/reset-password?token=...).
@@ -23,25 +26,26 @@ import { PasswordLength } from './password-length'
 export function ResetPasswordForm({ token }: { token?: string }) {
 	const t = useTranslations()
 	const router = useRouter()
-	const [password, setPassword] = useState('')
-	const [error, setError] = useState<string>()
-	const [formError, setFormError] = useState<string>()
 	const [invalidLink, setInvalidLink] = useState(!token)
-	const mutation = useMutation({
-		mutationFn: resetPassword,
-		onSuccess: () => router.push('/sign-in?reset=done'),
-		onError(failure) {
-			if (errorCode(failure) === 'INVALID_TOKEN') setInvalidLink(true)
-			else setFormError(requestErrorMessage(failure, t))
-		},
+	const reset = useResetPassword()
+	const form = useForm<Values>({
+		resolver: zodResolver(resetPasswordSchema),
+		defaultValues: { password: '' },
 	})
+	const password = useWatch({ control: form.control, name: 'password' })
 
-	function submit(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault()
-		const invalid = passwordLengthError(password, t)
-		setError(invalid)
-		setFormError(undefined)
-		if (!invalid && token) mutation.mutate({ token, newPassword: password })
+	function submit({ password: newPassword }: Values) {
+		if (!token) return
+		reset.mutate(
+			{ token, newPassword },
+			{
+				onSuccess: () => router.push('/sign-in?reset=done'),
+				onError(error) {
+					if (errorCode(error) === 'INVALID_TOKEN') setInvalidLink(true)
+					else form.setError('root', { message: requestErrorKey(error) })
+				},
+			},
+		)
 	}
 
 	return (
@@ -65,16 +69,18 @@ export function ResetPasswordForm({ token }: { token?: string }) {
 					</AlertDescription>
 				</Alert>
 			) : (
-				<form onSubmit={submit} noValidate>
+				// Still pending after success: the page is on its way to /sign-in.
+				<Form
+					form={form}
+					onSubmit={submit}
+					pending={reset.isPending || reset.isSuccess}
+				>
 					<FieldGroup>
-						<FormAlert message={formError} />
-						<PasswordField
-							id="password"
+						<FormRootAlert />
+						<FormPasswordField
+							name="password"
 							label={t('fields.newPassword')}
 							autoComplete="new-password"
-							error={error}
-							value={password}
-							onChange={(event) => setPassword(event.target.value)}
 							hintId="password-hint"
 							hint={
 								<PasswordLength
@@ -84,11 +90,9 @@ export function ResetPasswordForm({ token }: { token?: string }) {
 								/>
 							}
 						/>
-						<Button type="submit" size="lg" disabled={mutation.isPending}>
-							{t('resetPassword.submit')}
-						</Button>
+						<SubmitButton>{t('resetPassword.submit')}</SubmitButton>
 					</FieldGroup>
-				</form>
+				</Form>
 			)}
 		</div>
 	)

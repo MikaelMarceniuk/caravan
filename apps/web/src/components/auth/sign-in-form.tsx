@@ -1,29 +1,46 @@
 'use client'
 
-import { useMutation } from '@tanstack/react-query'
+import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { type FormEvent, useState } from 'react'
-import { FormAlert } from '@/components/form/form-alert'
-import { PasswordField } from '@/components/form/password-field'
-import { TextField } from '@/components/form/text-field'
+import { useForm } from 'react-hook-form'
+import type { z } from 'zod'
+import { Form, SubmitButton } from '@/components/form/form'
+import {
+	FormPasswordField,
+	FormRootAlert,
+	FormTextField,
+} from '@/components/form/form-fields'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
 import { FieldGroup } from '@/components/ui/field'
 import { storeLocale } from '@/i18n/locale-cookie'
 import { errorCode } from '@/lib/api'
-import { signIn } from '@/lib/auth'
-import { requestErrorMessage } from '@/lib/request-error'
-import { isEmail } from '@/lib/validation'
+import { useSignIn } from '@/lib/auth'
+import { requestErrorKey } from '@/lib/request-error'
+import { signInSchema } from '@/lib/schemas/auth'
 import { GoogleSignIn } from './not-implemented'
+
+type Values = z.infer<typeof signInSchema>
+
+/** What to say when sign-in fails, as a next-intl key. */
+function signInErrorKey(error: unknown) {
+	switch (errorCode(error)) {
+		case 'INVALID_EMAIL_OR_PASSWORD':
+			return 'errors.wrongCredentials'
+		case 'EMAIL_NOT_VERIFIED':
+			return 'errors.emailNotVerified'
+		default:
+			return requestErrorKey(error)
+	}
+}
 
 /**
  * `email` comes from the link that led here (/sign-in?email=...);
  * `passwordChanged`, from the password reset (/sign-in?reset=done).
  */
 export function SignInForm({
-	email,
+	email = '',
 	passwordChanged = false,
 }: {
 	email?: string
@@ -31,43 +48,21 @@ export function SignInForm({
 }) {
 	const t = useTranslations()
 	const router = useRouter()
-	const [formError, setFormError] = useState<string>()
-	const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-		{},
-	)
-	const mutation = useMutation({
-		mutationFn: signIn,
-		onSuccess(traveler) {
-			storeLocale(traveler.locale)
-			router.push('/session')
-		},
-		onError(error) {
-			const code = errorCode(error)
-			setFormError(
-				code === 'INVALID_EMAIL_OR_PASSWORD'
-					? t('errors.wrongCredentials')
-					: code === 'EMAIL_NOT_VERIFIED'
-						? t('errors.emailNotVerified')
-						: requestErrorMessage(error, t),
-			)
-		},
+	const signIn = useSignIn()
+	const form = useForm<Values>({
+		resolver: zodResolver(signInSchema),
+		defaultValues: { email, password: '' },
 	})
 
-	function submit(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault()
-		const form = new FormData(event.currentTarget)
-		const fields = {
-			email: String(form.get('email')),
-			password: String(form.get('password')),
-		}
-		const found = {
-			email: isEmail(fields.email) ? undefined : t('errors.emailInvalid'),
-			password: fields.password ? undefined : t('errors.passwordRequired'),
-		}
-		setErrors(found)
-		setFormError(undefined)
-		if (found.email || found.password) return
-		mutation.mutate(fields)
+	function submit(values: Values) {
+		signIn.mutate(values, {
+			onSuccess(traveler) {
+				storeLocale(traveler.locale)
+				router.push('/session')
+			},
+			onError: (error) =>
+				form.setError('root', { message: signInErrorKey(error) }),
+		})
 	}
 
 	return (
@@ -83,23 +78,25 @@ export function SignInForm({
 					<AlertDescription>{t('signIn.passwordChanged')}</AlertDescription>
 				</Alert>
 			)}
-			<form onSubmit={submit} noValidate>
+			{/* Still pending after success: the page is on its way to /session. */}
+			<Form
+				form={form}
+				onSubmit={submit}
+				pending={signIn.isPending || signIn.isSuccess}
+			>
 				<FieldGroup>
 					<GoogleSignIn />
-					<FormAlert message={formError} />
-					<TextField
-						id="email"
+					<FormRootAlert />
+					<FormTextField
+						name="email"
 						label={t('fields.email')}
 						type="email"
 						autoComplete="email"
-						defaultValue={email}
-						error={errors.email}
 					/>
-					<PasswordField
-						id="password"
+					<FormPasswordField
+						name="password"
 						label={t('fields.password')}
 						autoComplete="current-password"
-						error={errors.password}
 					/>
 					<Link
 						href="/forgot-password"
@@ -107,11 +104,9 @@ export function SignInForm({
 					>
 						{t('signIn.forgotPassword')}
 					</Link>
-					<Button type="submit" size="lg" disabled={mutation.isPending}>
-						{t('signIn.submit')}
-					</Button>
+					<SubmitButton>{t('signIn.submit')}</SubmitButton>
 				</FieldGroup>
-			</form>
+			</Form>
 			<p className="text-sm text-muted-foreground">
 				{t('signIn.newHere')}{' '}
 				<Link

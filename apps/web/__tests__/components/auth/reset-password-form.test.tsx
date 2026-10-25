@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ResetPasswordForm } from '@/components/auth/reset-password-form'
-import { descriptionOf } from '../../support/a11y'
+import { descriptionOf, isDisabled } from '../../support/a11y'
 import { axeViolations } from '../../support/axe'
-import { fakeApi } from '../../support/fake-api'
+import { fakeApi, pendingReply } from '../../support/fake-api'
 import { navigation } from '../../support/navigation'
 import { renderUi } from '../../support/render'
 
@@ -75,5 +75,23 @@ describe('the reset password form', () => {
 		const { container } = renderUi(<ResetPasswordForm token="token" />)
 
 		expect(await axeViolations(container)).toEqual([])
+	})
+
+	test('turns the field off while saving the password', async () => {
+		const reply = pendingReply()
+		fakeApi({ [RESET]: reply.route })
+		renderUi(<ResetPasswordForm token="token-from-link" />)
+
+		await choose()
+
+		await waitFor(() =>
+			expect(isDisabled(screen.getByLabelText('New password'))).toBe(true),
+		)
+		expect(
+			screen
+				.getByRole('button', { name: 'Save password' })
+				.getAttribute('aria-busy'),
+		).toBe('true')
+		reply.send({ status: 200, data: {} })
 	})
 })
