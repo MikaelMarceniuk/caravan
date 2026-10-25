@@ -44,7 +44,13 @@ export function TripsScreen() {
 					</TripGrid>
 				</TabsContent>
 				<TabsContent value="past">
-					<TripGrid trips={past} />
+					{past.length > 0 ? (
+						<TripGrid trips={past} />
+					) : (
+						<p className="py-12 text-center text-muted-foreground">
+							{t('noPastTrips')}
+						</p>
+					)}
 				</TabsContent>
 			</Tabs>
 		</main>

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { TripSummary } from '@caravan/core'
 import { screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
 import { fakeApi } from '../../support/fake-api'
@@ -83,5 +84,19 @@ describe('the trips screen', () => {
 			await screen.findByRole('button', { name: 'Plan a new trip' }),
 		).toBeTruthy()
 		expect(screen.queryAllByRole('article')).toEqual([])
+	})
+
+	test('has no past trips yet', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [balkans] } }),
+		})
+		renderTripsScreen()
+
+		await userEvent
+			.setup()
+			.click(await screen.findByRole('tab', { name: 'Past 0' }))
+
+		const past = screen.getByRole('tabpanel')
+		expect(past.textContent).toBe('No past trips yet')
 	})
 })

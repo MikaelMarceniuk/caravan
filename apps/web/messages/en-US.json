@@ -91,7 +91,8 @@
 		"past": "Past",
 		"noStops": "No stops yet",
 		"planTrip": "Plan a new trip",
-		"planTripHint": "Name it, then add the stops"
+		"planTripHint": "Name it, then add the stops",
+		"noPastTrips": "No past trips yet"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
