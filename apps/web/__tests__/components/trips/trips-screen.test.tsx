@@ -3,6 +3,7 @@ import type { TripSummary } from '@caravan/core'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
+import type { Locale } from '@/i18n/locale'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
 import { fakeApi, pendingReply } from '../../support/fake-api'
 import { navigation } from '../../support/navigation'
@@ -31,10 +32,16 @@ const LIST_TRIPS = 'GET /trips'
  * The trips screen of a signed-in traveler, as the server hands it over.
  * `sessionReadAt` 0 stands for a session read long ago, past its 30 s of freshness.
  */
-function renderTripsScreen({ sessionReadAt }: { sessionReadAt?: number } = {}) {
+function renderTripsScreen({
+	sessionReadAt,
+	locale,
+}: {
+	sessionReadAt?: number
+	locale?: Locale
+} = {}) {
 	const queryClient = testQueryClient()
 	queryClient.setQueryData(SESSION_KEY, ana, { updatedAt: sessionReadAt })
-	return renderUi(<TripsScreen />, { queryClient })
+	return renderUi(<TripsScreen />, { queryClient, locale })
 }
 
 /** The names on the trip cards, in order. */
@@ -185,5 +192,31 @@ describe('the trips screen', () => {
 		renderTripsScreen({ sessionReadAt: 0 })
 
 		await waitFor(() => expect(navigation.visited()).toEqual(['/sign-in']))
+	})
+
+	test('shows the trips screen in Portuguese', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [balkans] } }),
+		})
+
+		renderTripsScreen({ locale: 'pt-BR' })
+
+		expect(
+			await screen.findByRole('tab', { name: 'Próximas 1', selected: true }),
+		).toBeTruthy()
+		expect(screen.getByRole('tab', { name: 'Passadas 0' })).toBeTruthy()
+		expect(screen.getByText('1 viagem pela frente')).toBeTruthy()
+		expect(screen.getByText('Nenhuma parada ainda')).toBeTruthy()
+		expect(screen.getByRole('button', { name: 'Nova viagem' })).toBeTruthy()
+	})
+
+	test('counts several upcoming trips in Portuguese', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [balkans, japan] } }),
+		})
+
+		renderTripsScreen({ locale: 'pt-BR' })
+
+		expect(await screen.findByText('2 viagens pela frente')).toBeTruthy()
 	})
 })
