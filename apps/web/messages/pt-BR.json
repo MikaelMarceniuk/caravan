@@ -92,7 +92,8 @@
 		"noStops": "Nenhuma parada ainda",
 		"planTrip": "Planejar uma viagem",
 		"planTripHint": "Dê um nome e depois adicione as paradas",
-		"noPastTrips": "Nenhuma viagem passada ainda"
+		"noPastTrips": "Nenhuma viagem passada ainda",
+		"loading": "Carregando suas viagens…"
 	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",

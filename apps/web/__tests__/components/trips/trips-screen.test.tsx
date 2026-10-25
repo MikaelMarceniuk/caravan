@@ -4,7 +4,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TripsScreen } from '@/components/trips/trips-screen'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
-import { fakeApi } from '../../support/fake-api'
+import { fakeApi, pendingReply } from '../../support/fake-api'
 import { renderUi, testQueryClient } from '../../support/render'
 
 const ana: Traveler = {
@@ -98,5 +98,17 @@ describe('the trips screen', () => {
 
 		const past = screen.getByRole('tabpanel')
 		expect(past.textContent).toBe('No past trips yet')
+	})
+
+	test('tells the trips are loading', async () => {
+		const reply = pendingReply()
+		fakeApi({ [LIST_TRIPS]: reply.route })
+
+		renderTripsScreen()
+
+		expect(screen.getByRole('status').textContent).toBe('Loading your trips…')
+		expect(screen.queryByRole('tab')).toBeNull()
+		reply.send({ status: 200, data: { trips: [] } })
+		await screen.findByRole('tab', { name: 'Upcoming 0' })
 	})
 })
