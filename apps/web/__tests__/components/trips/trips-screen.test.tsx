@@ -48,4 +48,18 @@ describe('the trips screen', () => {
 
 		expect(await tripNames()).toEqual(['Balkans Road Trip', 'Japan in Autumn'])
 	})
+
+	test('counts the upcoming trips', async () => {
+		fakeApi({
+			[LIST_TRIPS]: () => ({ status: 200, data: { trips: [balkans, japan] } }),
+		})
+
+		renderTripsScreen()
+
+		expect(
+			await screen.findByRole('tab', { name: 'Upcoming 2', selected: true }),
+		).toBeTruthy()
+		expect(screen.getByRole('tab', { name: 'Past 0' })).toBeTruthy()
+		expect(screen.getByText('2 coming up')).toBeTruthy()
+	})
 })

@@ -84,6 +84,12 @@
 		"no": "Não",
 		"signOut": "Sair"
 	},
+	"trips": {
+		"title": "Suas viagens",
+		"comingUp": "{count, plural, one {# viagem pela frente} other {# viagens pela frente}}",
+		"upcoming": "Próximas",
+		"past": "Passadas"
+	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
 		"en-US": "English (US)"

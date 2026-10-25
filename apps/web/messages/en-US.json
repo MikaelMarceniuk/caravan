@@ -84,6 +84,12 @@
 		"no": "No",
 		"signOut": "Sign out"
 	},
+	"trips": {
+		"title": "Your trips",
+		"comingUp": "{count, plural, other {# coming up}}",
+		"upcoming": "Upcoming",
+		"past": "Past"
+	},
 	"languages": {
 		"pt-BR": "Português (Brasil)",
 		"en-US": "English (US)"
