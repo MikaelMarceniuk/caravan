@@ -44,4 +44,16 @@ describe('the trips', () => {
 		})
 		expect(await listed.json()).toEqual({ trips: [trip] })
 	})
+
+	test('refuses a trip without a name', async () => {
+		const { app, cookie } = await signedIn()
+
+		const response = await requestApi(app, 'POST', '/trips', {
+			cookie,
+			body: {},
+		})
+
+		expect(response.status).toBe(422)
+		expect(await response.json()).toEqual({ code: 'INVALID_INPUT' })
+	})
 })
