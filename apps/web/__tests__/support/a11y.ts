@@ -7,3 +7,8 @@ export function descriptionOf(element: Element) {
 		.filter(Boolean)
 		.join(' ')
 }
+
+/** Whether a control is off, by its own attribute or by a disabled fieldset around it. */
+export function isDisabled(element: Element) {
+	return element.matches(':disabled')
+}
