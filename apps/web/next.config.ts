@@ -14,7 +14,7 @@ const config: NextConfig = {
 	// The standalone build traces files from the repo root (a monorepo).
 	outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
 	// Workspace packages ship TypeScript sources (architecture.md D36).
-	transpilePackages: ['@caravan/tokens'],
+	transpilePackages: ['@caravan/core', '@caravan/tokens'],
 	// One origin in development too, like Caddy in production (deploy.md P2): cookies and email links just work.
 	async rewrites() {
 		return [{ source: '/api/:path*', destination: `${API_URL}/api/:path*` }]
