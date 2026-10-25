@@ -6,6 +6,7 @@ import { TripsScreen } from '@/components/trips/trips-screen'
 import { SESSION_KEY, type Traveler } from '@/lib/auth'
 import { descriptionOf, isDisabled } from '../../support/a11y'
 import { fakeApi, pendingReply } from '../../support/fake-api'
+import { navigation } from '../../support/navigation'
 import { renderUi, testQueryClient } from '../../support/render'
 
 const ana: Traveler = {
@@ -169,5 +170,15 @@ describe('the new trip dialog', () => {
 
 		await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 		expect(document.activeElement).toBe(opener)
+	})
+
+	test('goes to sign-in when creating finds the session over', async () => {
+		await renderTripsScreen({
+			[CREATE_TRIP]: () => ({ status: 401, data: { code: 'UNAUTHORIZED' } }),
+		})
+
+		await createTrip('Balkans Road Trip')
+
+		await waitFor(() => expect(navigation.visited()).toEqual(['/sign-in']))
 	})
 })
