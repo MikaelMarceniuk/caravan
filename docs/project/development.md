@@ -25,7 +25,7 @@
 
 - **Semantic HTML first:** `button`, `a`, `label`, `nav`, `main`, headings in order. ARIA only when native HTML can't do it.
 - **Keyboard:** everything works without a mouse, focus is always visible, focus order is logical. Sheets and dialogs trap focus, close with `Esc` and return focus to whatever opened them.
-- **Forms:** every field has a `label`; errors are tied to the field (`aria-describedby`) and announced. This also covers server rejections (`stop_overlap`, `outside_trip`), when the form reopens with the user's data.
+- **Forms:** every field has a `label`; errors are tied to the field (`aria-describedby`) and announced. This also covers server rejections (`stop_overlap`), when the form reopens with the user's data.
 - **Real time:** relevant remote changes are announced through `aria-live="polite"`, throttled. A remote change never steals focus from someone who is editing.
 - **Color:** AA contrast checked in the `tokens`, including text on the stop colors. Color is never the only signal (a member has a color **and** initials or a name).
 - **Motion:** animations respect `prefers-reduced-motion`.

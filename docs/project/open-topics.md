@@ -3,7 +3,7 @@
 > The single list of what is still to be decided, checked or fixed.
 > Decisions already made are in [`architecture.md`](./architecture.md) §0 and [`deploy.md`](./deploy.md) §0; the vocabulary, in [`CONTEXT.md`](../../CONTEXT.md).
 > There is no schedule: each item says **what it blocks**. When an item is decided, it leaves this list and becomes a line in §0 of the right document. Numbers are fixed: a decided item's number is never reused.
-> Last revised: 2026-10-24.
+> Last revised: 2026-10-25.
 
 ---
 
@@ -11,8 +11,6 @@
 
 | # | Topic | Blocks | Weight |
 |---|---|---|---|
-| **A. Before the first code** ||||
-| 2 | Trip dates × stop dates | `trips` schema, NewTrip | 🔴 |
 | **B. Domain model** ||||
 | 8 | Map: how to draw the route | Map (v2) | 🟢 |
 | 9 | Stop time zone | Agenda (v1.x) | 🟢 |
@@ -32,22 +30,6 @@
 | 21 | New limits (lock and cursors) | Presence and lock | 🟢 |
 | 24 | Auth limits across instances | 2 API instances (M5) | 🟢 |
 | **F. Practical preparation** | | Auth, CI, deploy | 🟡 |
-
----
-
-## A. Before the first code
-
-### 2. Trip dates × stop dates 🔴
-
-**Postponed (2026-10-24):** decide when the `trips` schema and NewTrip are built in M1.
-
-**Why it matters:** shortening the trip and leaving stops outside it is accepted (it becomes a warning), but creating a stop outside the trip is rejected. Also, days now belong to stops (D12): a trip with no stops has no Board. This defines the `trips` columns and the NewTrip flow.
-
-**Options:**
-- **A) Trip dates are derived from the stops** (from the first `arrive` to the last `leave`). NewTrip asks for the first stop instead of standalone dates.
-- **B) Keep the trip's own dates** and accept the asymmetry (each op only validates what it changes).
-
-**Starting recommendation:** A, if the NewTrip and EmptyTrip flows can take the change. One rule and one kind of warning go away.
 
 ---
 
@@ -75,7 +57,7 @@
 
 ### 11. Full list of `RejectReason` 🟡
 
-**Why it matters:** today the final rejections are `forbidden`, `locked`, `deleted`, `stop_overlap` and `outside_trip`. Some cases are missing.
+**Why it matters:** today the final rejections are `forbidden`, `locked`, `deleted` and `stop_overlap` (`outside_trip` went away with D44). Some cases are missing.
 
 **To discuss:**
 - Limit exceeded (2,000 activities, 100 stops, 20 members): which reason, and whether it is final or transient.

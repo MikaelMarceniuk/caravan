@@ -38,7 +38,7 @@ The product is simple on purpose. The complexity is in what it demonstrates tech
 ### In
 - Auth: email/password, forgot password and "Try the demo" (anonymous session) with Better Auth. Google and Apple come later
 - Trip list (upcoming/past, who is online, pending invites)
-- Create a trip (name and dates; first stop and invites are optional). Days come from the stops (D12); whether the trip has its own dates is item 2 of [`open-topics.md`](./open-topics.md)
+- Create a trip (the name; first stop and invites are optional). Days come from the stops (D12), and so do the trip's dates (D44)
 - Invites: link (role, expires in 7 days, reset) and email (resend, accept/decline); owner and editor roles
 - **Overview:** list of stops, add/edit/remove a stop (city, dates, transport, color), gap warning
 - **Board** per stop: days as columns (editable title), cards ordered by time
